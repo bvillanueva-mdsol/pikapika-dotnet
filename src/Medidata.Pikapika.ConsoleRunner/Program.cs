@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Medidata.Pikapika.Miner;
+using Medidata.Pikapika.Miner.DataAccess;
+using Medidata.Pikapika.Miner.Extensions;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Configuration;
 
@@ -28,13 +31,16 @@ namespace Medidata.Pikapika.ConsoleRunner
                     Console.WriteLine("Pikapika-dotnet start mining...");
                     try
                     {
+                        var dbAccess = new PikapikaRepositoryAccess(configuration.GetConnectionString("PikapikaDatabase"));
                         var dotnetAppsMiner = new DotnetAppsMiner(
                             configuration.GetSection("AuthorizationUsername").Value,
                             configuration.GetSection("AuthorizationToken").Value,
                             configuration.GetSection("GithubBaseUri").Value);
+
                         var timer = new Stopwatch();
                         timer.Start();
                         var dotnetApps = await dotnetAppsMiner.Mine();
+                        await dbAccess.PushData(dotnetApps.SelectMany(x => x.ConvertToDotnetAppProjectFile()));
                         timer.Stop();
                         Console.WriteLine($"Operation elapsed time: {timer.Elapsed}");
                     }

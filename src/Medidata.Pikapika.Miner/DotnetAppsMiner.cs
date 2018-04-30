@@ -29,7 +29,9 @@ namespace Medidata.Pikapika.Miner
         {
             // get all c# mdsol repos
             var dotnetApps = (await GetAllDotnetApps())
-                .Where(app => app.Repository.Equals("mdsol/Rave"));
+                .Where(app => app.Repository.Equals("mdsol/Rave") ||
+                    app.Repository.Equals("mdsol/Gambit") ||
+                    app.Repository.Equals("mdsol/Medidata.SLAP"));
             Console.WriteLine($"Dotnet apps count: {dotnetApps.Count()}");
 
             // loop mdsol repos
@@ -51,22 +53,23 @@ namespace Medidata.Pikapika.Miner
                     {
                         Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is very old or invalid!");
                         projectFile.DotnetAppProject = new DotnetAppProject { Frameworks = new string[] { "OLD!" } };
-                        continue;
-                    }
-
-                    if (projectXmlDocument.IsNewCsProjFormat())
-                    {
-                        Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
-                        projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
                     }
                     else
                     {
-                        Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is old!");
-                        projectFile.DotnetAppProject = new DotnetAppProject
+                        if (projectXmlDocument.IsNewCsProjFormat())
                         {
-                            Frameworks = new string[] { projectXmlDocument.GetFrameworkFromOldCsProj() },
-                            ProjectNugets = await GetOldCsProjProjectNugets(dotnetApp, projectFile)
-                        };
+                            Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
+                            projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
+                        }
+                        else
+                        {
+                            Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is old!");
+                            projectFile.DotnetAppProject = new DotnetAppProject
+                            {
+                                Frameworks = new string[] { projectXmlDocument.GetFrameworkFromOldCsProj() },
+                                ProjectNugets = await GetOldCsProjProjectNugets(dotnetApp, projectFile)
+                            };
+                        }
                     }
 
                     projectFiles.Add(projectFile);
