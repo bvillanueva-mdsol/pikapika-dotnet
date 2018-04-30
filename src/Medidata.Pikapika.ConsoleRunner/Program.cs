@@ -5,7 +5,7 @@ using Medidata.Pikapika.Miner;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Configuration;
 
-namespace pikapika_dotnet
+namespace Medidata.Pikapika.ConsoleRunner
 {
     class Program
     {
