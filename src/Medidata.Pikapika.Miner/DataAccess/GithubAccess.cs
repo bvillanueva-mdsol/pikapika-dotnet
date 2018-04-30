@@ -97,30 +97,19 @@ namespace Medidata.Pikapika.Miner.DataAccess
         private async Task<HttpResponseMessage> SendWithBasicAuthAsync(HttpMethod httpMethod, string requestUri)
         {
             var retryCount = 0;
+            var retryDelayTimeMs = 60000;
             while (retryCount < RetryMaxLimit)
             {
                 var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 var response = await _client.SendAsync(request).ConfigureAwait(false);
-
-                // Forbidden(403), check retry after value and retry later
-                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
-                    response.Headers.TryGetValues("Retry-After", out IEnumerable<string> retryAfters) &&
-                    retryAfters.Any() &&
-                    int.TryParse(retryAfters.First(), out int retryAfter))
-                {
-                    Console.WriteLine($"Delaying search code requests, Search Request Limit reached! Delay time: {retryAfter * 500}");
-                    await Task.Delay(retryAfter * 500);
-                    retryCount++;
-                    continue;
-                }
 
                 // Forbidden(403), check X-RateLimit-Remaining
                 if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
                     response.Headers.TryGetValues("X-RateLimit-Remaining", out IEnumerable<string> rateLimitRemaining) &&
                     rateLimitRemaining.Any())
                 {
-                    Console.WriteLine($"Delaying search code requests, Search Request Request Limit reached! Delay time: {60000}");
-                    await Task.Delay(60000);
+                    Console.WriteLine($"Delaying Github Requests: {requestUri}, Request Limit reached! Delay time: {retryDelayTimeMs}");
+                    await Task.Delay(retryDelayTimeMs);
                     retryCount++;
                     continue;
                 }
