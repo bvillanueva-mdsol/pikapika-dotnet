@@ -29,16 +29,7 @@ namespace Medidata.Pikapika.Miner
         public async Task<IEnumerable<DotnetApp>> Mine()
         {
             // get all c# mdsol repos
-            var dotnetApps = (await GetAllDotnetApps())
-                .Where(app =>
-                    // app.Repository.Equals("mdsol/Rave") ||
-                    //app.Repository.Equals("mdsol/Gambit") ||
-                    //app.Repository.Equals("mdsol/DictionaryParser") ||
-                    //app.Repository.Equals("mdsol/SLoginator") ||
-                    //app.Repository.Equals("mdsol/ogrillon") ||
-                    //app.Repository.Equals("mdsol/Medidata.Ampridatvir") ||
-                    //app.Repository.Equals("mdsol/Medidata.SLAP") ||
-                    app.Repository.Equals("mdsol/ShadowBroker"));
+            var dotnetApps = (await GetAllDotnetApps());
             Console.WriteLine($"Dotnet apps count: {dotnetApps.Count()}");
 
             // loop mdsol repos
