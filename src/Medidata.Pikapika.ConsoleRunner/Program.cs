@@ -36,11 +36,24 @@ namespace Medidata.Pikapika.ConsoleRunner
                             configuration.GetSection("AuthorizationUsername").Value,
                             configuration.GetSection("AuthorizationToken").Value,
                             configuration.GetSection("GithubBaseUri").Value);
+                        var nugetRepositoryAccess = new NugetRepositoryAccess(
+                            new Uri(configuration.GetSection("PublicNugetServerUri").Value),
+                            new Uri(configuration.GetSection("MedidataNugetServerBaseUri").Value),
+                            configuration.GetSection("MedidataNugetToken").Value,
+                            configuration.GetSection("MedidataNugetFeeds").GetChildren().Select(x => x.Value));
+                        var dotnetNugetsMiner = new DotnetNugetsMiner(nugetRepositoryAccess);
 
                         var timer = new Stopwatch();
                         timer.Start();
                         var dotnetApps = await dotnetAppsMiner.Mine();
-                        await dbAccess.PushData(dotnetApps.SelectMany(x => x.ConvertToDotnetAppProjectFile()));
+                        var dotnetNugets = await dotnetNugetsMiner.Mine(dotnetApps
+                            .SelectMany(x => x.Projects
+                                .SelectMany(y => y.DotnetAppProject.ProjectNugets
+                                    .Select(z => z.Name)))
+                            .Distinct());
+                        var dotnetAppsFromDb = await dbAccess.SaveDotnetApps(dotnetApps.SelectMany(x => x.ConvertToDotnetApps()));
+                        var dotnetNugetsFromDb = await dbAccess.SaveDotnetNugets(dotnetNugets.Values.Select(x => x.ConvertToDotnetNugets()).ToList());
+                        await dbAccess.SaveDotnetAppDotnetNugetRelationships(dotnetApps.SelectMany(x => x.ConvertToDotnetAppDotnetNugetList(dotnetAppsFromDb, dotnetNugetsFromDb)).ToList());
                         timer.Stop();
                         Console.WriteLine($"Operation elapsed time: {timer.Elapsed}");
                     }

@@ -13,6 +13,7 @@ namespace Medidata.Pikapika.Miner
     public class DotnetAppsMiner
     {
         private GithubAccess _githubAccess;
+
         private GitHubClient _githubOfficialClient;
 
         public DotnetAppsMiner(string authorizationUsername,
@@ -29,9 +30,15 @@ namespace Medidata.Pikapika.Miner
         {
             // get all c# mdsol repos
             var dotnetApps = (await GetAllDotnetApps())
-                .Where(app => app.Repository.Equals("mdsol/Rave") ||
-                    app.Repository.Equals("mdsol/Gambit") ||
-                    app.Repository.Equals("mdsol/Medidata.SLAP"));
+                .Where(app =>
+                    // app.Repository.Equals("mdsol/Rave") ||
+                    //app.Repository.Equals("mdsol/Gambit") ||
+                    //app.Repository.Equals("mdsol/DictionaryParser") ||
+                    //app.Repository.Equals("mdsol/SLoginator") ||
+                    //app.Repository.Equals("mdsol/ogrillon") ||
+                    //app.Repository.Equals("mdsol/Medidata.Ampridatvir") ||
+                    //app.Repository.Equals("mdsol/Medidata.SLAP") ||
+                    app.Repository.Equals("mdsol/ShadowBroker"));
             Console.WriteLine($"Dotnet apps count: {dotnetApps.Count()}");
 
             // loop mdsol repos
@@ -76,7 +83,7 @@ namespace Medidata.Pikapika.Miner
                 }
 
                 dotnetApp.Projects = projectFiles;
-                Console.WriteLine(dotnetApp);
+                Console.WriteLine($"Fetched projects of {dotnetApp.Repository}.");
             }
 
             return dotnetApps;

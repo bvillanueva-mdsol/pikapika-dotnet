@@ -18,9 +18,9 @@ namespace Medidata.Pikapika.Miner.DataAccess
             _options = optionsBuilder.Options;
         }
 
-        public async Task PushData(IEnumerable<DotnetApps> newDotnetApps)
+        public async Task<IEnumerable<DotnetApps>> SaveDotnetApps(IEnumerable<DotnetApps> newDotnetApps)
         {
-            var storedDotnetApps = await GetDotnetApps();
+            var storedDotnetApps = (await GetDotnetApps()).ToList();
             var tobeDeletedApps = storedDotnetApps
                 .Where(x => !newDotnetApps
                     .Any(y =>
@@ -34,38 +34,119 @@ namespace Medidata.Pikapika.Miner.DataAccess
             {
                 try
                 {
-                    Save(newDotnetApp, storedDotnetApps.ToList());
+                    SaveDotnetApp(newDotnetApp, storedDotnetApps);
+                    Console.WriteLine($"Saved App Name:{newDotnetApp.Name}, path: {newDotnetApp.Path} in DB.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in saving Name:{newDotnetApp.Name}, path: {newDotnetApp.Path},  message: {ex.Message}");
+                    Console.WriteLine($"Error in saving App Name:{newDotnetApp.Name}, path: {newDotnetApp.Path},  message: {ex.Message}");
+                }
+            }
+
+            return await GetDotnetApps();
+        }
+
+        public async Task<IEnumerable<DotnetNugets>> SaveDotnetNugets(IEnumerable<DotnetNugets> newDotnetNugets)
+        {
+            var storedDotnetNugets = (await GetDotnetNugets()).ToList();
+
+            foreach (var newDotnetNuget in newDotnetNugets)
+            {
+                try
+                {
+                    SaveDotnetNuget(newDotnetNuget, storedDotnetNugets);
+                    Console.WriteLine($"Saved Nuget Name:{newDotnetNuget.Name}, path: {newDotnetNuget.Slug} in DB.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in saving Nuget Name:{newDotnetNuget.Name}, slug: {newDotnetNuget.Slug},  message: {ex.Message}");
+                }
+            }
+
+            return await GetDotnetNugets();
+        }
+
+        public async Task SaveDotnetAppDotnetNugetRelationships(IEnumerable<DotnetAppDotnetNugets> dotnetAppDotnetNugets)
+        {
+            var storedDotnetAppDotnetNugets = (await GetDotnetAppsDotnetNugets()).ToList();
+            foreach (var dotnetAppDotnetNuget in dotnetAppDotnetNugets)
+            {
+                try
+                {
+                    SaveDotnetAppDotnetNugetRelationship(dotnetAppDotnetNuget, storedDotnetAppDotnetNugets);
+                    Console.WriteLine($"Saved DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} in DB.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in saving DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId},  message: {ex.Message}");
                 }
             }
         }
 
-        private void Save(DotnetApps dotnetApp, List<DotnetApps> storedDotnetApps)
+        private void SaveDotnetApp(DotnetApps dotnetApp, List<DotnetApps> storedDotnetApps)
         {
             var storedDotnetApp = storedDotnetApps
                 .Where(x =>
                         x.Repo.Equals(dotnetApp.Repo, StringComparison.OrdinalIgnoreCase) &&
                         x.Path.Equals(dotnetApp.Path, StringComparison.OrdinalIgnoreCase))
                 .FirstOrDefault();
-            if (storedDotnetApp != null)
+            using (var context = new PikapikaContext(_options))
             {
-                dotnetApp.Id = storedDotnetApp.Id;
-                using (var context = new PikapikaContext(_options))
+                if (storedDotnetApp != null)
                 {
+                    dotnetApp.Id = storedDotnetApp.Id;
                     context.DotnetApps.Update(dotnetApp);
-                    context.SaveChanges();
                 }
-            }
-            else
-            {
-                using (var context = new PikapikaContext(_options))
+                else
                 {
                     context.DotnetApps.Add(dotnetApp);
-                    context.SaveChanges();
                 }
+                context.SaveChanges();
+            }  
+        }
+
+        private void SaveDotnetNuget(DotnetNugets dotnetNuget, List<DotnetNugets> storedDotnetNugets)
+        {
+            var storedDotnetNuget = storedDotnetNugets
+                .Where(x =>
+                        x.Slug.Equals(dotnetNuget.Slug, StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
+
+            using (var context = new PikapikaContext(_options))
+            {
+                if (storedDotnetNuget != null)
+                {
+                    dotnetNuget.Id = storedDotnetNuget.Id;
+                    context.DotnetNugets.Update(dotnetNuget);
+                }
+                else
+                {
+                    context.DotnetNugets.Add(dotnetNuget);
+                }
+                context.SaveChanges();
+            } 
+        }
+
+        private void SaveDotnetAppDotnetNugetRelationship(DotnetAppDotnetNugets dotnetAppDotnetNuget, List<DotnetAppDotnetNugets> storedDotnetAppDotnetNugets)
+        {
+            var storedDotnetAppDotnetNuget = storedDotnetAppDotnetNugets
+                .Where(x =>
+                        x.DotnetAppId.Value == dotnetAppDotnetNuget.DotnetAppId.Value &&
+                        x.DotnetNugetId.Value == dotnetAppDotnetNuget.DotnetNugetId.Value)
+                .FirstOrDefault();
+
+            using (var context = new PikapikaContext(_options))
+            {
+                if (storedDotnetAppDotnetNuget != null)
+                {
+                    dotnetAppDotnetNuget.Id = storedDotnetAppDotnetNuget.Id;
+                    context.DotnetAppDotnetNugets.Update(dotnetAppDotnetNuget);
+                }
+                else
+                {
+                    context.DotnetAppDotnetNugets.Add(dotnetAppDotnetNuget);
+                }
+                context.SaveChanges();
             }
         }
 
@@ -77,15 +158,19 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }
         }
 
-        private async Task<DotnetApps> GetDotnetApp(DotnetApps dotnetApp)
+        private async Task<IEnumerable<DotnetNugets>> GetDotnetNugets()
         {
             using (var context = new PikapikaContext(_options))
             {
-                return await context.DotnetApps
-                    .Where(x => 
-                        x.Repo.Equals(dotnetApp.Repo, StringComparison.OrdinalIgnoreCase) &&
-                        x.Path.Equals(dotnetApp.Path, StringComparison.OrdinalIgnoreCase))
-                    .FirstOrDefaultAsync();
+                return await context.DotnetNugets.ToListAsync();
+            }
+        }
+
+        private async Task<IEnumerable<DotnetAppDotnetNugets>> GetDotnetAppsDotnetNugets()
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                return await context.DotnetAppDotnetNugets.ToListAsync();
             }
         }
 
