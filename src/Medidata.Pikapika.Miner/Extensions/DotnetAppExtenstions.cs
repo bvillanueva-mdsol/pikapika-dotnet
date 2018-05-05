@@ -13,7 +13,7 @@ namespace Medidata.Pikapika.Miner.Extensions
             return dotnetApp.Projects
                 .Select(x => new DotnetApps
                 {
-                    Name = $"{dotnetApp.Name}/{x.ProjectFileName.Replace(".csproj", string.Empty)}",
+                    Name = x.ProjectFileName.Replace(".csproj", string.Empty),
                     Slug = dotnetApp.Slug,
                     Repo = dotnetApp.Repository,
                     Path = x.ProjectFilePath,
@@ -28,29 +28,40 @@ namespace Medidata.Pikapika.Miner.Extensions
                 });
         }
 
-        public static IEnumerable<DotnetAppDotnetNugets> ConvertToDotnetAppDotnetNugetList(this DotnetApp dotnetApp, IEnumerable<DotnetApps> dotnetAppsFromDb, IEnumerable<DotnetNugets> dotnetNugetsFromDb)
+        public static IEnumerable<DotnetAppDotnetNugets> ConvertToDotnetAppDotnetNugetList(this DotnetApp dotnetApp,
+            IEnumerable<DotnetApps> dotnetAppsFromDb, IEnumerable<DotnetNugets> dotnetNugetsFromDb, Logger logger)
         {
             var result = new List<DotnetAppDotnetNugets>();
 
             foreach (var project in dotnetApp.Projects)
             {
-                var dotnetAppId = dotnetAppsFromDb
+                var dotnetAppsFromDbFiltered = dotnetAppsFromDb
                     .Where(x =>
                         x.Repo.Equals(dotnetApp.Repository, StringComparison.OrdinalIgnoreCase) &&
-                        x.Path.Equals(project.ProjectFilePath, StringComparison.OrdinalIgnoreCase))
-                    .First().Id;
+                        x.Path.Equals(project.ProjectFilePath, StringComparison.OrdinalIgnoreCase));
+
+                if (!dotnetAppsFromDbFiltered.Any())
+                {
+                    logger.LogWarning($"Nuget {dotnetApp.Repository}/{project.ProjectFilePath} not found in Apps Master List.");
+                    continue;
+                }
 
                 foreach (var projectNuget in project.DotnetAppProject.ProjectNugets)
                 {
-                    var dotnetNugetId = dotnetNugetsFromDb
+                    var dotnetNugetsFromDBFiltered = dotnetNugetsFromDb
                         .Where(x =>
-                            x.Slug.Equals(projectNuget.Name, StringComparison.OrdinalIgnoreCase))
-                        .First().Id;
+                            x.Slug.Equals(projectNuget.Name, StringComparison.OrdinalIgnoreCase));
+
+                    if (!dotnetNugetsFromDBFiltered.Any())
+                    {
+                        logger.LogWarning($"Nuget {projectNuget.Name} not found in Nugets Master List.");
+                        continue;
+                    }
 
                     result.Add(new DotnetAppDotnetNugets
                     {
-                        DotnetAppId = dotnetAppId,
-                        DotnetNugetId = dotnetNugetId,
+                        DotnetAppId = dotnetAppsFromDbFiltered.First().Id,
+                        DotnetNugetId = dotnetNugetsFromDBFiltered.First().Id,
                         Version = projectNuget.Version
                     });
                 }

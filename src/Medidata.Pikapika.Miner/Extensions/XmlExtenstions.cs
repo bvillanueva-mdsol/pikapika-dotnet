@@ -11,7 +11,7 @@ namespace Medidata.Pikapika.Miner.Extensions
 {
     public static class XmlExtenstions
     {
-        public static XDocument TryConvertToXDocument(this string xmlString, out bool isXmlStringValid)
+        public static XDocument TryConvertToXDocument(this string xmlString, Logger logger, out bool isXmlStringValid)
         {
             isXmlStringValid = false;
 
@@ -24,7 +24,7 @@ namespace Medidata.Pikapika.Miner.Extensions
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"TryConvertToXDocument Exception encountered: {ex.Message}");
+                logger.LogError($"TryConvertToXDocument Exception encountered: {ex.Message}");
                 isXmlStringValid = false;
                 return null;
             }

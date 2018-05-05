@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Medidata.Pikapika.Miner.DataAccess;
 using Medidata.Pikapika.Miner.Models;
@@ -9,9 +10,12 @@ namespace Medidata.Pikapika.Miner
     {
         private NugetRepositoryAccess _nugetRepositoryAccess;
 
-        public DotnetNugetsMiner(NugetRepositoryAccess nugetRepositoryAccess)
+        private Logger _logger;
+
+        public DotnetNugetsMiner(NugetRepositoryAccess nugetRepositoryAccess, Logger logger)
         {
             _nugetRepositoryAccess = nugetRepositoryAccess;
+            _logger = logger;
         }
 
         public async Task<IDictionary<string, IEnumerable<NugetPackage>>> Mine(IEnumerable<string> nugetIds)
@@ -20,7 +24,13 @@ namespace Medidata.Pikapika.Miner
 
             foreach (var nugetId in nugetIds)
             {
-                result.Add(nugetId, await _nugetRepositoryAccess.GetNugetFullInformation(nugetId));
+                var nugetInfo = await _nugetRepositoryAccess.GetNugetFullInformation(nugetId);
+                if (nugetInfo.Any())
+                {
+                    result.Add(nugetId, nugetInfo);
+                    continue;
+                }
+                _logger.LogError($"{nugetId} information cannot be found in our nuget feeds.");
             }
 
             return result;

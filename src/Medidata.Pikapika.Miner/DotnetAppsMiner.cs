@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Medidata.Pikapika.DatabaseAccess;
 using Medidata.Pikapika.Miner.DataAccess;
 using Medidata.Pikapika.Miner.DataAccess.Models.SearchCodeApi;
 using Medidata.Pikapika.Miner.Extensions;
@@ -16,23 +17,28 @@ namespace Medidata.Pikapika.Miner
 
         private GitHubClient _githubOfficialClient;
 
+        private Logger _logger;
+
         public DotnetAppsMiner(string authorizationUsername,
-            string authorizationToken, string githubBaseUri)
+            string authorizationToken, string githubBaseUri, Logger logger)
         {
-            _githubAccess = new GithubAccess(new Uri(githubBaseUri), authorizationUsername, authorizationToken);
+            _githubAccess = new GithubAccess(new Uri(githubBaseUri), authorizationUsername, authorizationToken, logger);
             _githubOfficialClient = new GitHubClient(new ProductHeaderValue(Helpers.Constants.UserAgent))
             {
                 Credentials = new Credentials(authorizationToken)
             };
+            _logger = logger;
         }
 
-        public async Task<IEnumerable<DotnetApp>> Mine()
+        public async Task<IEnumerable<DotnetApp>> Mine(IEnumerable<DotnetApps> dotnetAppsFromDb)
         {
             // get all c# mdsol repos
-            var dotnetApps = (await GetAllDotnetApps());
-            Console.WriteLine($"Dotnet apps count: {dotnetApps.Count()}");
+            var dotnetApps = await GetDotnetApps(TransformToRepoDatetimeDictionary(dotnetAppsFromDb));
+            var count = dotnetApps.Count();
+            _logger.LogInformation($"Dotnet apps count: {count}");
 
             // loop mdsol repos
+            var counter = 0;
             foreach (var dotnetApp in dotnetApps)
             {
                 var projectFiles = new List<DotnetAppProjectFile>();
@@ -44,28 +50,32 @@ namespace Medidata.Pikapika.Miner
                 foreach (var githubSearchItem in githubSearchItems)
                 {
                     var projectFile = githubSearchItem.ConvertToDotnetAppProjectFile();
-                    var projectXmlDocument = (await _githubAccess.GetFileContent(projectFile.ProjectContentsUrl))
-                        .TryConvertToXDocument(out bool isProjectFileContentValid);
+                    var projectFileContent = await _githubAccess.GetFileContent(projectFile.ProjectContentsUrl);
+                    var projectXmlDocument = projectFileContent.TryConvertToXDocument(_logger, out bool isProjectFileContentValid);
 
                     if (!isProjectFileContentValid)
                     {
-                        Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is very old or invalid!");
-                        projectFile.DotnetAppProject = new DotnetAppProject { Frameworks = new string[] { "OLD!" } };
+                        _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is very old or invalid!");
+                        projectFile.DotnetAppProject = new DotnetAppProject
+                        {
+                            Frameworks = new string[] { "OLD!" },
+                            ProjectNugets = Enumerable.Empty<DotnetAppProjectNuget>()
+                        };
                     }
                     else
                     {
                         if (projectXmlDocument.IsNewCsProjFormat())
                         {
-                            Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
+                            _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
                             projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
                         }
                         else
                         {
-                            Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is old!");
+                            _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is old!");
                             projectFile.DotnetAppProject = new DotnetAppProject
                             {
                                 Frameworks = new string[] { projectXmlDocument.GetFrameworkFromOldCsProj() },
-                                ProjectNugets = await GetOldCsProjProjectNugets(dotnetApp, projectFile)
+                                ProjectNugets = await GetOldCsProjProjectNugets(dotnetApp, projectFile, projectFileContent)
                             };
                         }
                     }
@@ -74,15 +84,36 @@ namespace Medidata.Pikapika.Miner
                 }
 
                 dotnetApp.Projects = projectFiles;
-                Console.WriteLine($"Fetched projects of {dotnetApp.Repository}.");
+                counter++;
+                _logger.LogInformation($"Fetched projects of {dotnetApp.Repository}. {counter} of {count} Apps.");
             }
 
             return dotnetApps;
         }
 
-        private async Task<IEnumerable<DotnetApp>> GetAllDotnetApps()
+        private static Dictionary<string, DateTime> TransformToRepoDatetimeDictionary(IEnumerable<DotnetApps> dotnetAppsFromDb)
         {
-            return (await _githubOfficialClient.Repository.GetAllForOrg("mdsol"))
+            var distinctRepos = dotnetAppsFromDb
+                .Select(x => x.Repo)
+                .Distinct();
+
+            var result = new Dictionary<string, DateTime>();
+
+            foreach (var distinctRepo in distinctRepos)
+            {
+                result.Add(distinctRepo, dotnetAppsFromDb
+                    .Where(x => x.Repo == distinctRepo)
+                    .Select(x => x.UpdatedAt)
+                    .OrderBy(x => x)
+                    .First());
+            }
+
+            return result;
+        }
+
+        private async Task<IEnumerable<DotnetApp>> GetDotnetApps(Dictionary<string, DateTime> repoDatetimeDictionary)
+        {
+            var allDotnetApps = (await _githubOfficialClient.Repository.GetAllForOrg("mdsol"))
                 .Where(x => x.Language == "C#")
                 .Select(cSharpRepo => new DotnetApp
                 {
@@ -93,7 +124,34 @@ namespace Medidata.Pikapika.Miner
                     DefaultBranch = cSharpRepo.DefaultBranch,
                     CreatedAt = cSharpRepo.CreatedAt,
                     UpdatedAt = cSharpRepo.UpdatedAt
-                })
+                });
+
+            return allDotnetApps
+                //.Where(app =>
+                    //app.Repository.Equals("mdsol/Rave") ||
+                    //app.Repository.Equals("mdsol/Gambit") ||
+                    //app.Repository.Equals("mdsol/DictionaryParser") ||
+                    //app.Repository.Equals("mdsol/SLoginator") ||
+                    //app.Repository.Equals("mdsol/ogrillon") ||
+                    //app.Repository.Equals("mdsol/Medidata.Ampridatvir") ||
+                    //app.Repository.Equals("mdsol/Medidata.SLAP") ||
+                    //app.Repository.Equals("mdsol/RaveSdetExperiments") ||
+                    //app.Repository.Equals("mdsol/coder") ||
+                    //app.Repository.Equals("mdsol/meds_extractor_jobmanager") ||
+                    //app.Repository.Equals("mdsol/meds_extractor") ||
+                    //app.Repository.Equals("mdsol/Balance-Almac-Drug-Shipping") ||
+                    //app.Repository.Equals("mdsol/Medidata.Classification.RegressionTests") ||
+                    //app.Repository.Equals("mdsol/support-portal-api") ||
+                    //app.Repository.Equals("mdsol/neo_rave_etl") ||
+                    //app.Repository.Equals("mdsol/kindling") ||
+                    //app.Repository.Equals("mdsol/rave-safety-gateway") ||
+                    //app.Repository.Equals("mdsol/ShadowBroker"))
+                .Where(app =>
+                    !repoDatetimeDictionary.Any(x =>
+                        x.Key.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)) ||
+                    repoDatetimeDictionary.Any(x =>
+                        x.Key.Equals(app.Repository, StringComparison.OrdinalIgnoreCase) &&
+                        !x.Value.Equals(app.UpdatedAt.DateTime)))
                 .ToList();
         }
 
@@ -110,8 +168,16 @@ namespace Medidata.Pikapika.Miner
                     .FirstOrDefault();
         }
 
-        private async Task<IEnumerable<DotnetAppProjectNuget>> GetOldCsProjProjectNugets(DotnetApp dotnetApp, DotnetAppProjectFile projectFile)
+        private async Task<IEnumerable<DotnetAppProjectNuget>> GetOldCsProjProjectNugets(DotnetApp dotnetApp,
+            DotnetAppProjectFile projectFile, string projectFileContent)
         {
+            var query = "packages.config";
+            if (!projectFileContent.Contains(query))
+            {
+                _logger.LogWarning($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} has no packages.config file in csproj!");
+                return Enumerable.Empty<DotnetAppProjectNuget>();
+            }
+
             var packagesConfigFile = await SearchFile(
                             "packages.config",
                             "config",
@@ -120,15 +186,15 @@ namespace Medidata.Pikapika.Miner
 
             if (packagesConfigFile == null)
             {
-                Console.WriteLine($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} has no packages.config file!");
+                _logger.LogWarning($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} has no packages.config file in repo!");
                 return Enumerable.Empty<DotnetAppProjectNuget>();
             }
 
             var packagesConfigContent = await _githubAccess.GetFileContent(packagesConfigFile.ContentsUrl);
-            var packagesConfigXmlDocument = packagesConfigContent.TryConvertToXDocument(out bool isPackagesConfigFileContentValid);
+            var packagesConfigXmlDocument = packagesConfigContent.TryConvertToXDocument(_logger, out bool isPackagesConfigFileContentValid);
             if (!isPackagesConfigFileContentValid)
             {
-                Console.WriteLine($"{dotnetApp.Repository}/{packagesConfigFile.Path} is not valid!");
+                _logger.LogError($"{dotnetApp.Repository}/{packagesConfigFile.Path} is not valid!");
                 return Enumerable.Empty<DotnetAppProjectNuget>();
             }
 

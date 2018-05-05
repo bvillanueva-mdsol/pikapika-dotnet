@@ -19,15 +19,19 @@ namespace Medidata.Pikapika.Miner.DataAccess
 
         private HttpClient _client;
 
+        private Logger _logger;
+
         private int RetryMaxLimit => 3;
 
         public GithubAccess(Uri githubBaseUri,
-            string authorizationUsername, string authorizationToken)
+            string authorizationUsername, string authorizationToken, Logger logger)
         {
             _githubBaseUri = githubBaseUri;
             _authorization =  $"{authorizationUsername}:{authorizationToken}";
 
             SetHttpClient();
+
+            _logger = logger;
         }
 
         private void SetHttpClient()
@@ -56,7 +60,9 @@ namespace Medidata.Pikapika.Miner.DataAccess
                 var stringResult = await response.Content.ReadAsStringAsync();
                 var result = JsonConvert.DeserializeObject<Models.SearchCodeApi.Result>(stringResult);
                 searchItems.AddRange(result.Items);
-                Console.WriteLine($"{repo} Search Code Items Fetched, Total-Expected:{result.TotalCount}, Count: {searchItems.Count()}");
+
+                var printPath = string.IsNullOrWhiteSpace(path) ? query : $"{path}/{query}";
+                _logger.LogInformation($"Search {repo} for {printPath} Code Items Fetched, Total-Expected:{result.TotalCount}, Count: {searchItems.Count()}");
 
                 requestUri = null;
                 // Check for next page
@@ -103,12 +109,24 @@ namespace Medidata.Pikapika.Miner.DataAccess
                 var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 var response = await _client.SendAsync(request).ConfigureAwait(false);
 
+                // Forbidden(403), check Retry-After
+                if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
+                    response.Headers.TryGetValues("Retry-After", out IEnumerable<string> retryAfters) &&
+                    retryAfters.Any() &&
+                    int.TryParse(retryAfters.First(), out int retryAfter))
+                {
+                    _logger.LogInformation($"Delaying Github Requests: {requestUri}, Request Limit reached! Delay time: {retryAfter * 500}");
+                    await Task.Delay(retryAfter * 500);
+                    retryCount++;
+                    continue;
+                }
+
                 // Forbidden(403), check X-RateLimit-Remaining
                 if (response.StatusCode == System.Net.HttpStatusCode.Forbidden &&
                     response.Headers.TryGetValues("X-RateLimit-Remaining", out IEnumerable<string> rateLimitRemaining) &&
                     rateLimitRemaining.Any())
                 {
-                    Console.WriteLine($"Delaying Github Requests: {requestUri}, Request Limit reached! Delay time: {retryDelayTimeMs}");
+                    _logger.LogInformation($"Delaying Github Requests: {requestUri}, Request Limit reached! Delay time: {retryDelayTimeMs}");
                     await Task.Delay(retryDelayTimeMs);
                     retryCount++;
                     continue;
@@ -117,13 +135,20 @@ namespace Medidata.Pikapika.Miner.DataAccess
                 // Bad Request, Caused by httpclient overused???
                 if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
                 {
-                    Console.WriteLine($"Resetting Github Httpclient!");
+                    _logger.LogInformation($"Resetting Github Httpclient!");
                     SetHttpClient();
                     retryCount++;
                     continue;
                 }
 
-                response.EnsureSuccessStatusCode();
+                try
+                {
+                    response.EnsureSuccessStatusCode();
+                }
+                catch (Exception ex)
+                {
+                    throw;
+                }
 
                 return response;
             }

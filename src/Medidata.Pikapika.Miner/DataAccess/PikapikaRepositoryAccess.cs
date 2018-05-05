@@ -11,55 +11,73 @@ namespace Medidata.Pikapika.Miner.DataAccess
     {
         protected readonly DbContextOptions<PikapikaContext> _options;
 
-        public PikapikaRepositoryAccess(string connectionString)
+        private Logger _logger;
+
+        public PikapikaRepositoryAccess(string connectionString, Logger logger)
         {
             var optionsBuilder = new DbContextOptionsBuilder<PikapikaContext>();
             optionsBuilder.UseNpgsql(connectionString);
             _options = optionsBuilder.Options;
+            _logger = logger;
         }
 
         public async Task<IEnumerable<DotnetApps>> SaveDotnetApps(IEnumerable<DotnetApps> newDotnetApps)
         {
-            var storedDotnetApps = (await GetDotnetApps()).ToList();
-            var tobeDeletedApps = storedDotnetApps
-                .Where(x => !newDotnetApps
-                    .Any(y =>
-                        y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
-                        y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)));
+            var dotnetAppsFromDb = await GetDotnetApps();
+            var tobeDeletedApps = dotnetAppsFromDb
+                    .Where(x =>
+                        newDotnetApps.Any(y =>
+                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase)) &&
+                        !newDotnetApps.Any(y =>
+                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
+                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)));
             foreach (var tobeDeletedApp in tobeDeletedApps)
             {
+                _logger.LogWarning($"Deleting in App Name:{tobeDeletedApp.Name}, path: {tobeDeletedApp.Repo}/{tobeDeletedApp.Path}");
                 await DeleteDotnetApp(tobeDeletedApp);
             }
+
+            var savedApps = new List<DotnetApps>();
+
             foreach (var newDotnetApp in newDotnetApps)
             {
                 try
                 {
-                    SaveDotnetApp(newDotnetApp, storedDotnetApps);
-                    Console.WriteLine($"Saved App Name:{newDotnetApp.Name}, path: {newDotnetApp.Path} in DB.");
+                    await SaveDotnetApp(newDotnetApp, dotnetAppsFromDb);
+                    savedApps.Add(newDotnetApp);
+                    _logger.LogInformation($"Saved App Name: {newDotnetApp.Name}, path: {newDotnetApp.Repo}/{newDotnetApp.Path} in DB.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in saving App Name:{newDotnetApp.Name}, path: {newDotnetApp.Path},  message: {ex.Message}");
+                    _logger.LogError($"Error in saving App Name:{newDotnetApp.Name}, path: {newDotnetApp.Repo}/{newDotnetApp.Path}, message: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"Error in saving App Name:{newDotnetApp.Name}, path: {newDotnetApp.Repo}/{newDotnetApp.Path}, message: {ex.InnerException.Message}");
+                    }
                 }
             }
 
-            return await GetDotnetApps();
+            return await GetDotnetApps(savedApps);
         }
 
         public async Task<IEnumerable<DotnetNugets>> SaveDotnetNugets(IEnumerable<DotnetNugets> newDotnetNugets)
         {
-            var storedDotnetNugets = (await GetDotnetNugets()).ToList();
+            var dotnetNugetsFromDb = await GetDotnetNugets();
 
             foreach (var newDotnetNuget in newDotnetNugets)
             {
                 try
                 {
-                    SaveDotnetNuget(newDotnetNuget, storedDotnetNugets);
-                    Console.WriteLine($"Saved Nuget Name:{newDotnetNuget.Name}, path: {newDotnetNuget.Slug} in DB.");
+                    SaveDotnetNuget(newDotnetNuget, dotnetNugetsFromDb);
+                    _logger.LogInformation($"Saved Nuget Name:{newDotnetNuget.Name}, path: {newDotnetNuget.Slug} in DB.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in saving Nuget Name:{newDotnetNuget.Name}, slug: {newDotnetNuget.Slug},  message: {ex.Message}");
+                    _logger.LogError($"Error in saving Nuget Name:{newDotnetNuget.Name}, slug: {newDotnetNuget.Slug}, message: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"Error in saving Nuget Name:{newDotnetNuget.Name}, slug: {newDotnetNuget.Slug}, message: {ex.InnerException.Message}");
+                    }
                 }
             }
 
@@ -68,34 +86,87 @@ namespace Medidata.Pikapika.Miner.DataAccess
 
         public async Task SaveDotnetAppDotnetNugetRelationships(IEnumerable<DotnetAppDotnetNugets> dotnetAppDotnetNugets)
         {
-            var storedDotnetAppDotnetNugets = (await GetDotnetAppsDotnetNugets()).ToList();
+            var dotnetAppNugetsRelationshipFromDb = await GetDotnetAppsDotnetNugets();
+            var tobeDeletedAppNugetsRelationship = dotnetAppNugetsRelationshipFromDb
+                    .Where(x =>
+                        dotnetAppDotnetNugets.Any(y =>
+                            y.DotnetAppId.Value == x.DotnetAppId.Value) &&
+                        !dotnetAppDotnetNugets.Any(y =>
+                            y.DotnetAppId.Value == x.DotnetAppId.Value &&
+                            y.DotnetNugetId.Value == x.DotnetNugetId.Value));
+            foreach (var tobeDeletedAppNugetRelationship in tobeDeletedAppNugetsRelationship)
+            {
+                _logger.LogWarning($"Deleting in App Nuget Relationship AppId:{tobeDeletedAppNugetRelationship.DotnetAppId}, NugetId: {tobeDeletedAppNugetRelationship.DotnetNugetId}");
+                DeleteDotnetAppNugetRelationship(tobeDeletedAppNugetRelationship);
+            }
+
             foreach (var dotnetAppDotnetNuget in dotnetAppDotnetNugets)
             {
                 try
                 {
-                    SaveDotnetAppDotnetNugetRelationship(dotnetAppDotnetNuget, storedDotnetAppDotnetNugets);
-                    Console.WriteLine($"Saved DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} in DB.");
+                    SaveDotnetAppDotnetNugetRelationship(dotnetAppDotnetNuget, dotnetAppNugetsRelationshipFromDb);
+                    _logger.LogInformation($"Saved DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} in DB.");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error in saving DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId},  message: {ex.Message}");
+                    _logger.LogError($"Error in saving DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId}, message: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        _logger.LogError($"Inner Exception in saving DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId}, message: {ex.InnerException.Message}");
+                    }
                 }
             }
         }
 
-        private void SaveDotnetApp(DotnetApps dotnetApp, List<DotnetApps> storedDotnetApps)
+        public async Task<IEnumerable<DotnetApps>> GetDotnetApps()
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                return await context.DotnetApps.ToListAsync();
+            }
+        }
+
+        public async Task<IEnumerable<DotnetApps>> GetDotnetApps(IEnumerable<DotnetApps> apps)
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                return await context.DotnetApps
+                    .Where(x =>
+                        apps.Any(y => 
+                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
+                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)))
+                    .ToListAsync();
+            }
+        }
+
+        public async Task<IEnumerable<DotnetNugets>> GetDotnetNugets()
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                return await context.DotnetNugets.ToListAsync();
+            }
+        }
+
+        private async Task SaveDotnetApp(DotnetApps dotnetApp, IEnumerable<DotnetApps> storedDotnetApps)
         {
             var storedDotnetApp = storedDotnetApps
                 .Where(x =>
                         x.Repo.Equals(dotnetApp.Repo, StringComparison.OrdinalIgnoreCase) &&
                         x.Path.Equals(dotnetApp.Path, StringComparison.OrdinalIgnoreCase))
                 .FirstOrDefault();
+
             using (var context = new PikapikaContext(_options))
             {
                 if (storedDotnetApp != null)
                 {
                     dotnetApp.Id = storedDotnetApp.Id;
                     context.DotnetApps.Update(dotnetApp);
+
+                    foreach (var reference in await context.DotnetAppDotnetNugets
+                        .Where(reference => reference.DotnetAppId == dotnetApp.Id).ToListAsync())
+                    {
+                        context.Entry(reference).State = EntityState.Deleted;
+                    }
                 }
                 else
                 {
@@ -105,7 +176,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }  
         }
 
-        private void SaveDotnetNuget(DotnetNugets dotnetNuget, List<DotnetNugets> storedDotnetNugets)
+        private void SaveDotnetNuget(DotnetNugets dotnetNuget, IEnumerable<DotnetNugets> storedDotnetNugets)
         {
             var storedDotnetNuget = storedDotnetNugets
                 .Where(x =>
@@ -127,7 +198,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
             } 
         }
 
-        private void SaveDotnetAppDotnetNugetRelationship(DotnetAppDotnetNugets dotnetAppDotnetNuget, List<DotnetAppDotnetNugets> storedDotnetAppDotnetNugets)
+        private void SaveDotnetAppDotnetNugetRelationship(DotnetAppDotnetNugets dotnetAppDotnetNuget, IEnumerable<DotnetAppDotnetNugets> storedDotnetAppDotnetNugets)
         {
             var storedDotnetAppDotnetNuget = storedDotnetAppDotnetNugets
                 .Where(x =>
@@ -150,22 +221,6 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }
         }
 
-        private async Task<IEnumerable<DotnetApps>> GetDotnetApps()
-        {
-            using (var context = new PikapikaContext(_options))
-            {
-                return await context.DotnetApps.ToListAsync();
-            }
-        }
-
-        private async Task<IEnumerable<DotnetNugets>> GetDotnetNugets()
-        {
-            using (var context = new PikapikaContext(_options))
-            {
-                return await context.DotnetNugets.ToListAsync();
-            }
-        }
-
         private async Task<IEnumerable<DotnetAppDotnetNugets>> GetDotnetAppsDotnetNugets()
         {
             using (var context = new PikapikaContext(_options))
@@ -184,6 +239,16 @@ namespace Medidata.Pikapika.Miner.DataAccess
                     context.Entry(reference).State = EntityState.Deleted;
                 }
                 context.Entry(dotnetApp).State = EntityState.Deleted;
+
+                context.SaveChanges();
+            }
+        }
+
+        private void DeleteDotnetAppNugetRelationship(DotnetAppDotnetNugets dotnetAppDotnetNugets)
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                context.Entry(dotnetAppDotnetNugets).State = EntityState.Deleted;
 
                 context.SaveChanges();
             }
