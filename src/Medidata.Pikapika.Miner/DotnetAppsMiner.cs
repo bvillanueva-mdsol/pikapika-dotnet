@@ -33,13 +33,13 @@ namespace Medidata.Pikapika.Miner
         public async Task<IEnumerable<DotnetApp>> Mine(IEnumerable<DotnetApps> dotnetAppsFromDb)
         {
             // get all c# mdsol repos
-            var dotnetApps = await GetDotnetApps(TransformToRepoDatetimeDictionary(dotnetAppsFromDb));
-            var count = dotnetApps.Count();
+            var newOrUpdatedDotnetApps = await GetNewOrUpdatedDotnetApps(TransformToRepoDatetimeDictionary(dotnetAppsFromDb));
+            var count = newOrUpdatedDotnetApps.Count();
             _logger.LogInformation($"Dotnet apps count: {count}");
 
             // loop mdsol repos
             var counter = 0;
-            foreach (var dotnetApp in dotnetApps)
+            foreach (var dotnetApp in newOrUpdatedDotnetApps)
             {
                 var projectFiles = new List<DotnetAppProjectFile>();
 
@@ -50,6 +50,13 @@ namespace Medidata.Pikapika.Miner
                 foreach (var githubSearchItem in githubSearchItems)
                 {
                     var projectFile = githubSearchItem.ConvertToDotnetAppProjectFile();
+                    if (dotnetApp.Repository.Equals("mdsol/Medidata.Coder.Architecture", StringComparison.OrdinalIgnoreCase) &&
+                        projectFile.ProjectFilePath.StartsWith("WCF_Demos", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogWarning($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is skipped!");
+                        continue;
+                    }
+
                     var projectFileContent = await _githubAccess.GetFileContent(projectFile.ProjectContentsUrl);
                     var projectXmlDocument = projectFileContent.TryConvertToXDocument(_logger, out bool isProjectFileContentValid);
 
@@ -68,6 +75,9 @@ namespace Medidata.Pikapika.Miner
                         {
                             _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
                             projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
+
+                            foreach(var nuget in projectFile.DotnetAppProject.ProjectNugets)
+                                _logger.LogDebug($"    Nuget: {nuget.Name} {nuget.Version}");
                         }
                         else
                         {
@@ -77,6 +87,9 @@ namespace Medidata.Pikapika.Miner
                                 Frameworks = new string[] { projectXmlDocument.GetFrameworkFromOldCsProj() },
                                 ProjectNugets = await GetOldCsProjProjectNugets(dotnetApp, projectFile, projectFileContent)
                             };
+
+                            foreach (var nuget in projectFile.DotnetAppProject.ProjectNugets)
+                                _logger.LogDebug($"    Nuget: {nuget.Name} {nuget.Version}");
                         }
                     }
 
@@ -88,7 +101,7 @@ namespace Medidata.Pikapika.Miner
                 _logger.LogInformation($"Fetched projects of {dotnetApp.Repository}. {counter} of {count} Apps.");
             }
 
-            return dotnetApps;
+            return newOrUpdatedDotnetApps;
         }
 
         private static Dictionary<string, DateTime> TransformToRepoDatetimeDictionary(IEnumerable<DotnetApps> dotnetAppsFromDb)
@@ -111,7 +124,7 @@ namespace Medidata.Pikapika.Miner
             return result;
         }
 
-        private async Task<IEnumerable<DotnetApp>> GetDotnetApps(Dictionary<string, DateTime> repoDatetimeDictionary)
+        private async Task<IEnumerable<DotnetApp>> GetNewOrUpdatedDotnetApps(Dictionary<string, DateTime> repoDatetimeDictionary)
         {
             var allDotnetApps = (await _githubOfficialClient.Repository.GetAllForOrg("mdsol"))
                 .Where(x => x.Language == "C#")
@@ -127,25 +140,50 @@ namespace Medidata.Pikapika.Miner
                 });
 
             return allDotnetApps
-                //.Where(app =>
-                    //app.Repository.Equals("mdsol/Rave") ||
-                    //app.Repository.Equals("mdsol/Gambit") ||
-                    //app.Repository.Equals("mdsol/DictionaryParser") ||
-                    //app.Repository.Equals("mdsol/SLoginator") ||
-                    //app.Repository.Equals("mdsol/ogrillon") ||
-                    //app.Repository.Equals("mdsol/Medidata.Ampridatvir") ||
-                    //app.Repository.Equals("mdsol/Medidata.SLAP") ||
-                    //app.Repository.Equals("mdsol/RaveSdetExperiments") ||
-                    //app.Repository.Equals("mdsol/coder") ||
-                    //app.Repository.Equals("mdsol/meds_extractor_jobmanager") ||
-                    //app.Repository.Equals("mdsol/meds_extractor") ||
-                    //app.Repository.Equals("mdsol/Balance-Almac-Drug-Shipping") ||
-                    //app.Repository.Equals("mdsol/Medidata.Classification.RegressionTests") ||
-                    //app.Repository.Equals("mdsol/support-portal-api") ||
-                    //app.Repository.Equals("mdsol/neo_rave_etl") ||
-                    //app.Repository.Equals("mdsol/kindling") ||
-                    //app.Repository.Equals("mdsol/rave-safety-gateway") ||
-                    //app.Repository.Equals("mdsol/ShadowBroker"))
+                .Where(app =>
+                    !(app.Repository.Equals("mdsol/uk-vss-archive") ||
+                    app.Repository.Equals("mdsol/rave-web-services-outbound") ||
+                    app.Repository.Equals("mdsol/Utilities") ||
+                    app.Repository.Equals("mdsol/rave-web-services") ||
+                    app.Repository.Equals("mdsol/NewEdc") ||
+                    app.Repository.Equals("mdsol/shui") ||
+                    app.Repository.Equals("mdsol/KIDA") ||
+                    app.Repository.Equals("mdsol/RdeXmlDifferenceReport") ||
+                    app.Repository.Equals("mdsol/VARServices") ||
+                    app.Repository.Equals("mdsol/SpotfireSupportApp") ||
+                    app.Repository.Equals("mdsol/DS-DbMonitor") ||
+                    app.Repository.Equals("mdsol/Rave563") ||
+                    app.Repository.Equals("mdsol/webstats") ||
+                    app.Repository.Equals("mdsol/Rave-IMedidata-Integration") ||
+                    app.Repository.Equals("mdsol/Slaad") ||
+                    app.Repository.Equals("mdsol/CloudETL") ||
+                    app.Repository.Equals("mdsol/tc-insights") ||
+                    app.Repository.Equals("mdsol/SAE-Reporting") ||
+                    app.Repository.Equals("mdsol/Rave-Extract") ||
+                    app.Repository.Equals("mdsol/RWS-Extract") ||
+                    app.Repository.Equals("mdsol/harmony-check") ||
+                    app.Repository.Equals("mdsol/Framework") ||
+                    app.Repository.Equals("mdsol/iMedidataAuthSupport.NET") ||
+                    app.Repository.Equals("mdsol/OneClickPerfTest") ||
+                    app.Repository.Equals("mdsol/rave-data-exporter") ||
+                    app.Repository.Equals("mdsol/rave-coder-integration") ||
+                    app.Repository.Equals("mdsol/CoderIntegrationTestHarness") ||
+                    app.Repository.Equals("mdsol/RaveUserAccessRemoval") ||
+                    app.Repository.Equals("mdsol/medidata-localization-dot-net") ||
+                    app.Repository.Equals("mdsol/metrics-dotnet-csharp") ||
+                    app.Repository.Equals("mdsol/license-registration-service") ||
+                    app.Repository.Equals("mdsol/kenku") ||
+                    app.Repository.Equals("mdsol/jerren") ||
+                    app.Repository.Equals("mdsol/autocoding") ||
+                    app.Repository.Equals("mdsol/iMedidata-Study-Admin") ||
+                    app.Repository.Equals("mdsol/TPS-Designer-Custom-Configurations") ||
+                    app.Repository.Equals("mdsol/AspNetMvcRouteReflector") ||
+                    app.Repository.Equals("mdsol/Medidata.Coder.Architecture") ||
+                    app.Repository.Equals("mdsol/Medidata.MAuthAuthorizationModule") ||
+                    app.Repository.Equals("mdsol/Medidata.Integration.Contracts") ||
+                    app.Repository.Equals("mdsol/excel_loader") ||
+                    app.Repository.Equals("mdsol/StandardReports") ||
+                    app.Repository.Equals("mdsol/StatusUpdater")))
                 .Where(app =>
                     !repoDatetimeDictionary.Any(x =>
                         x.Key.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)) ||

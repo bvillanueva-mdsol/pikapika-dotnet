@@ -23,29 +23,16 @@ namespace Medidata.Pikapika.Miner.DataAccess
 
         public async Task<IEnumerable<DotnetApps>> SaveDotnetApps(IEnumerable<DotnetApps> newDotnetApps)
         {
-            var dotnetAppsFromDb = await GetDotnetApps();
-            var tobeDeletedApps = dotnetAppsFromDb
-                    .Where(x =>
-                        newDotnetApps.Any(y =>
-                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase)) &&
-                        !newDotnetApps.Any(y =>
-                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
-                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)));
-            foreach (var tobeDeletedApp in tobeDeletedApps)
-            {
-                _logger.LogWarning($"Deleting in App Name:{tobeDeletedApp.Name}, path: {tobeDeletedApp.Repo}/{tobeDeletedApp.Path}");
-                await DeleteDotnetApp(tobeDeletedApp);
-            }
-
+            await DeleteNonExistingApps(newDotnetApps);
             var savedApps = new List<DotnetApps>();
 
             foreach (var newDotnetApp in newDotnetApps)
             {
                 try
                 {
-                    await SaveDotnetApp(newDotnetApp, dotnetAppsFromDb);
-                    savedApps.Add(newDotnetApp);
-                    _logger.LogInformation($"Saved App Name: {newDotnetApp.Name}, path: {newDotnetApp.Repo}/{newDotnetApp.Path} in DB.");
+                    var savedApp = await SaveDotnetApp(newDotnetApp);
+                    savedApps.Add(savedApp);
+                    _logger.LogInformation($"Saved App Name: {savedApp.Name}, path: {savedApp.Repo}/{savedApp.Path} in DB.");
                 }
                 catch (Exception ex)
                 {
@@ -126,6 +113,31 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }
         }
 
+        public async Task<bool> HasDuplicateDotnetApp(string name, string repo, string path)
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                var idCombination = $"{repo}{path}";
+                return (await context.DotnetApps
+                    .Where(x =>
+                        name.Equals(x.Name, StringComparison.OrdinalIgnoreCase) &&
+                        !idCombination.Equals($"{x.Repo}{x.Path}", StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefaultAsync()) != null;
+            }
+        }
+
+        public async Task<DotnetApps> GetDotnetApp(string repo, string path)
+        {
+            using (var context = new PikapikaContext(_options))
+            {
+                return await context.DotnetApps
+                    .Where(x =>
+                        repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
+                        path.Equals(x.Path, StringComparison.OrdinalIgnoreCase))
+                    .FirstOrDefaultAsync();
+            }
+        }
+
         public async Task<IEnumerable<DotnetApps>> GetDotnetApps(IEnumerable<DotnetApps> apps)
         {
             using (var context = new PikapikaContext(_options))
@@ -147,33 +159,44 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }
         }
 
-        private async Task SaveDotnetApp(DotnetApps dotnetApp, IEnumerable<DotnetApps> storedDotnetApps)
+        private async Task DeleteNonExistingApps(IEnumerable<DotnetApps> newDotnetApps)
         {
-            var storedDotnetApp = storedDotnetApps
-                .Where(x =>
-                        x.Repo.Equals(dotnetApp.Repo, StringComparison.OrdinalIgnoreCase) &&
-                        x.Path.Equals(dotnetApp.Path, StringComparison.OrdinalIgnoreCase))
-                .FirstOrDefault();
+            var dotnetAppsFromDb = await GetDotnetApps();
+            var tobeDeletedApps = dotnetAppsFromDb
+                    .Where(x =>
+                        newDotnetApps.Any(y =>
+                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase)) &&
+                        !newDotnetApps.Any(y =>
+                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
+                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)));
+            foreach (var tobeDeletedApp in tobeDeletedApps)
+            {
+                _logger.LogWarning($"Deleting in App Name:{tobeDeletedApp.Name}, path: {tobeDeletedApp.Repo}/{tobeDeletedApp.Path}");
+                await DeleteDotnetApp(tobeDeletedApp);
+            }
+        }
+
+        private async Task<DotnetApps> SaveDotnetApp(DotnetApps dotnetApp)
+        {
+            var existingDotnetApp = await GetDotnetApp(dotnetApp.Repo, dotnetApp.Path);
+            if (await HasDuplicateDotnetApp(dotnetApp.Name, dotnetApp.Repo, dotnetApp.Path))
+                dotnetApp.Name = ($"{dotnetApp.Repo}/{dotnetApp.Path}").Replace(".csproj", string.Empty);
 
             using (var context = new PikapikaContext(_options))
             {
-                if (storedDotnetApp != null)
+                if (existingDotnetApp != null)
                 {
-                    dotnetApp.Id = storedDotnetApp.Id;
+                    dotnetApp.Id = existingDotnetApp.Id;
                     context.DotnetApps.Update(dotnetApp);
-
-                    foreach (var reference in await context.DotnetAppDotnetNugets
-                        .Where(reference => reference.DotnetAppId == dotnetApp.Id).ToListAsync())
-                    {
-                        context.Entry(reference).State = EntityState.Deleted;
-                    }
                 }
                 else
                 {
                     context.DotnetApps.Add(dotnetApp);
                 }
                 context.SaveChanges();
-            }  
+            }
+
+            return dotnetApp;
         }
 
         private void SaveDotnetNuget(DotnetNugets dotnetNuget, IEnumerable<DotnetNugets> storedDotnetNugets)

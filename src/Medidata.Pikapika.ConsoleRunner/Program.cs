@@ -50,22 +50,26 @@ namespace Medidata.Pikapika.ConsoleRunner
                     var timer = new Stopwatch();
                     timer.Start();
 
+                    // mine dotnet projects
                     var dotnetAppsFromDb = await dbAccess.GetDotnetApps();
                     var dotnetRepos = await dotnetAppsMiner.Mine(dotnetAppsFromDb);
-                    var distinctDotnetNugets = dotnetRepos
+                    //mine dotnet nugets
+                    var dotnetNugetsToMine = (await dbAccess.GetDotnetNugets())
+                       .Select(x => x.Name).ToList();
+                    dotnetNugetsToMine.AddRange(dotnetRepos
                         .SelectMany(x => x.Projects
                             .SelectMany(y => y.DotnetAppProject.ProjectNugets
-                                .Select(z => z.Name)))
+                                .Select(z => z.Name))));
+                    var dotnetNugets = await dotnetNugetsMiner.Mine(dotnetNugetsToMine
                         .Distinct()
-                        .OrderBy(x => x).ToList();
-                    var dotnetNugets = await dotnetNugetsMiner.Mine(distinctDotnetNugets);
-
+                        .OrderBy(x => x).ToList());
+                    //save dotnet projects to db
                     var newdDotnetApps = dotnetRepos.SelectMany(x => x.ConvertToDotnetApps()).ToList();
                     var savedDotnetApps = await dbAccess.SaveDotnetApps(newdDotnetApps);
-
+                    // save dotnet nugets to db
                     var newDotnetNugets = dotnetNugets.Values.Select(x => x.ConvertToDotnetNugets()).ToList();
                     var savedDotnetNugets = await dbAccess.SaveDotnetNugets(newDotnetNugets);
-
+                    // save dotnet projects and nugets relationship to db
                     var dotnetAppNugetRelationship = dotnetRepos.SelectMany(x => x.ConvertToDotnetAppDotnetNugetList(savedDotnetApps, savedDotnetNugets, logger)).ToList();
                     await dbAccess.SaveDotnetAppDotnetNugetRelationships(dotnetAppNugetRelationship);
 
