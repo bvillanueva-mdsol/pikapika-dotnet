@@ -183,7 +183,8 @@ namespace Medidata.Pikapika.Miner
                     app.Repository.Equals("mdsol/Medidata.Integration.Contracts") ||
                     app.Repository.Equals("mdsol/excel_loader") ||
                     app.Repository.Equals("mdsol/StandardReports") ||
-                    app.Repository.Equals("mdsol/StatusUpdater")))
+                    app.Repository.Equals("mdsol/StatusUpdater") ||
+                    app.Repository.Equals("mdsol/medsym")))
                 .Where(app =>
                     !repoDatetimeDictionary.Any(x =>
                         x.Key.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)) ||

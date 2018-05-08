@@ -210,11 +210,20 @@ namespace Medidata.Pikapika.Miner.DataAccess
             {
                 if (storedDotnetNuget != null)
                 {
+                    if (storedDotnetNuget.UpdatedAt == dotnetNuget.UpdatedAt)
+                    {
+                        _logger.LogInformation($"Nuget {dotnetNuget.Name} did not change, no db operation for this nuget.");
+                        return;
+                    }
+
+
+                    _logger.LogInformation($"Nuget {dotnetNuget.Name} needs updating.");
                     dotnetNuget.Id = storedDotnetNuget.Id;
                     context.DotnetNugets.Update(dotnetNuget);
                 }
                 else
                 {
+                    _logger.LogInformation($"Nuget {dotnetNuget.Name} is new.");
                     context.DotnetNugets.Add(dotnetNuget);
                 }
                 context.SaveChanges();

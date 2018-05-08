@@ -11,10 +11,10 @@ namespace Medidata.Pikapika.Miner.DataAccess
 {
     public class NugetRepositoryAccess
     {
-        private readonly SourceRepository _publicNugetServerRepository;
+        internal readonly SourceRepository _publicNugetServerRepository;
 
-        private readonly List<SourceRepository> _medidataNugetFeeds;
-
+        internal readonly List<SourceRepository> _medidataNugetFeeds;
+        
         public NugetRepositoryAccess(Uri publicNugetServerUri,
             Uri medidataNugetServerBaseUri, string medidataNugetToken,
             IEnumerable<string> medidataNugetFeedNames)
@@ -34,13 +34,13 @@ namespace Medidata.Pikapika.Miner.DataAccess
             }
         }
 
-        public async Task<IEnumerable<NugetPackage>> GetNugetFullInformation(string nugetId)
+        public async Task<(IEnumerable<NugetPackage> packages, string foundFeedUri)> GetNugetFullInformation(string nugetId)
         {
             var publicNugetPackageMetadataResource = await _publicNugetServerRepository.GetResourceAsync<PackageMetadataResource>();
             var publicNugetSearchResult =  await publicNugetPackageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
 
             if (publicNugetSearchResult.Count() != 0)
-                return publicNugetSearchResult.Select(x => new OssNugetPackage(x));
+                return (publicNugetSearchResult.Select(x => new OssNugetPackage(x)), _publicNugetServerRepository.PackageSource.SourceUri.AbsoluteUri);
 
             foreach (var medidataNugetFeed in _medidataNugetFeeds)
             {
@@ -48,10 +48,10 @@ namespace Medidata.Pikapika.Miner.DataAccess
                 var medidataNugetSearchResult = await medidataNugetPackageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
 
                 if (medidataNugetSearchResult.Count() != 0)
-                    return medidataNugetSearchResult.Select(x => new PrivateNugetPackage(x));
+                    return (medidataNugetSearchResult.Select(x => new PrivateNugetPackage(x)), medidataNugetFeed.PackageSource.SourceUri.AbsoluteUri);
             }
 
-            return Enumerable.Empty<NugetPackage>();
+            return (Enumerable.Empty<NugetPackage>(), string.Empty);
         }
     }
 }

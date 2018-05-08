@@ -18,11 +18,14 @@ namespace Medidata.Pikapika.Miner.Extensions
             var createdAt = oldest.PackageSearchMetadata.Published.Value.DateTime;
             var updatedAt = latest.PackageSearchMetadata.Published.Value.DateTime;
             var versions = JsonConvert.SerializeObject(
-                packageSearchMetadatas.Select(x => new
-                {
-                    version = x.PackageSearchMetadata.Identity.Version.ToFullString(),
-                    timestamp = DateTime.SpecifyKind(x.PackageSearchMetadata.Published.Value.DateTime, DateTimeKind.Utc).ToString("o")
-                }).ToList());
+                packageSearchMetadatas
+                    .Reverse() // pikapika ui expects latest as first
+                    .Select(x => new
+                    {
+                        version = x.PackageSearchMetadata.Identity.Version.ToFullString(),
+                        timestamp = DateTime.SpecifyKind(x.PackageSearchMetadata.Published.Value.DateTime, DateTimeKind.Utc).ToString("o")
+                    })
+                    .ToList());
             var oss = latest is OssNugetPackage;
 
             return new DotnetNugets

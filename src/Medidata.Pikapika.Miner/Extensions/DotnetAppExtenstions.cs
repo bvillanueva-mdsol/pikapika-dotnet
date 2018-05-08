@@ -13,7 +13,7 @@ namespace Medidata.Pikapika.Miner.Extensions
             return dotnetApp.Projects
                 .Select(x => new DotnetApps
                 {
-                    Name = x.ProjectFileName.Replace(".csproj", string.Empty),
+                    Name = x.ProjectFileName.TrimDotnetAppName(),
                     Slug = dotnetApp.Slug,
                     Repo = dotnetApp.Repository,
                     Path = x.ProjectFilePath,
@@ -26,6 +26,14 @@ namespace Medidata.Pikapika.Miner.Extensions
                     CreatedAt = dotnetApp.CreatedAt.DateTime,
                     UpdatedAt = dotnetApp.UpdatedAt.DateTime
                 });
+        }
+
+        public static string TrimDotnetAppName(this string dotnetAppName)
+        {
+            return dotnetAppName
+                .Replace(".csproj", string.Empty)
+                .Replace("Medidata.", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace('.', '-');
         }
 
         public static IEnumerable<DotnetAppDotnetNugets> ConvertToDotnetAppDotnetNugetList(this DotnetApp dotnetApp,
