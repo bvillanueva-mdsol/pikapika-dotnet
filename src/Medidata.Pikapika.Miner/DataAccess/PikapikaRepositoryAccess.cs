@@ -180,7 +180,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
         {
             var existingDotnetApp = await GetDotnetApp(dotnetApp.Repo, dotnetApp.Path);
             if (await HasDuplicateDotnetApp(dotnetApp.Name, dotnetApp.Repo, dotnetApp.Path))
-                dotnetApp.Name = ($"{dotnetApp.Repo}/{dotnetApp.Path}").Replace(".csproj", string.Empty);
+                dotnetApp.Name = ($"{dotnetApp.Repo.Replace("mdsol/", string.Empty)}_{dotnetApp.Name}").Replace(".csproj", string.Empty);
 
             using (var context = new PikapikaContext(_options))
             {
@@ -216,7 +216,6 @@ namespace Medidata.Pikapika.Miner.DataAccess
                         return;
                     }
 
-
                     _logger.LogInformation($"Nuget {dotnetNuget.Name} needs updating.");
                     dotnetNuget.Id = storedDotnetNuget.Id;
                     context.DotnetNugets.Update(dotnetNuget);
@@ -242,11 +241,19 @@ namespace Medidata.Pikapika.Miner.DataAccess
             {
                 if (storedDotnetAppDotnetNuget != null)
                 {
+                    if (storedDotnetAppDotnetNuget.Version == dotnetAppDotnetNuget.Version)
+                    {
+                        _logger.LogInformation($"DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} did not change.");
+                        return;
+                    }
+
+                    _logger.LogInformation($"DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} needs updating.");
                     dotnetAppDotnetNuget.Id = storedDotnetAppDotnetNuget.Id;
                     context.DotnetAppDotnetNugets.Update(dotnetAppDotnetNuget);
                 }
                 else
                 {
+                    _logger.LogInformation($"DotnetAppDotnetNugetRelationship AppId:{dotnetAppDotnetNuget.DotnetAppId}, NugetId: {dotnetAppDotnetNuget.DotnetNugetId} is new.");
                     context.DotnetAppDotnetNugets.Add(dotnetAppDotnetNuget);
                 }
                 context.SaveChanges();
