@@ -90,14 +90,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
             var stringResult = await response.Content.ReadAsStringAsync();
             var jObject = JObject.Parse(stringResult);
             var data = Convert.FromBase64String(jObject["content"].ToString());
-            string decodedString = Encoding.UTF8.GetString(data);
-            string _byteOrderMarkUtf8 = Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble());
-            if (decodedString.StartsWith(_byteOrderMarkUtf8))
-            {
-                decodedString = decodedString.Remove(0, _byteOrderMarkUtf8.Length);
-            }
-
-            return decodedString;
+            return Encoding.UTF8.GetString(data);
         }
 
         private async Task<HttpResponseMessage> SendWithBasicAuthAsync(HttpMethod httpMethod, string requestUri)
@@ -140,15 +133,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
                     retryCount++;
                     continue;
                 }
-
-                try
-                {
-                    response.EnsureSuccessStatusCode();
-                }
-                catch (Exception ex)
-                {
-                    throw;
-                }
+                response.EnsureSuccessStatusCode();
 
                 return response;
             }

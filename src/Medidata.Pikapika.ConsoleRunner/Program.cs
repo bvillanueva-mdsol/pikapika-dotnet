@@ -63,6 +63,11 @@ namespace Medidata.Pikapika.ConsoleRunner
                     var dotnetNugets = await dotnetNugetsMiner.Mine(dotnetNugetsToMine
                         .Distinct()
                         .OrderBy(x => x).ToList());
+                    var dotnetFrameworks = dotnetRepos
+                        .SelectMany(x => x.Projects
+                            .SelectMany(y => y.DotnetAppProject.Frameworks))
+                        .Distinct()
+                        .OrderBy(x => x).ToList();
                     //save dotnet projects to db
                     var newdDotnetApps = dotnetRepos.SelectMany(x => x.ConvertToDotnetApps()).ToList();
                     var savedDotnetApps = await dbAccess.SaveDotnetApps(newdDotnetApps);
@@ -83,13 +88,13 @@ namespace Medidata.Pikapika.ConsoleRunner
 
                 logger.LogInformation("Pikapika-dotnet mining stopped");
 
-                Console.ReadLine();
+                //Console.ReadLine();
                 return 0;
             });
 
             app.Execute(args);
 
-            Console.ReadLine();
+            //Console.ReadLine();
         }
     }
 }

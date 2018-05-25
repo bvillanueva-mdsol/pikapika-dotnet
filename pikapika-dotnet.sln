@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Medidata.Pikapika.Miner", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Medidata.Pikapika.ConsoleRunner", "src\Medidata.Pikapika.ConsoleRunner\Medidata.Pikapika.ConsoleRunner.csproj", "{28A32F14-3009-494F-AEBE-4FCE705780D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medidata.Pikapika.DatabaseAccess", "src\Medidata.Pikapika.DatabaseAccess\Medidata.Pikapika.DatabaseAccess.csproj", "{69251C86-4654-4AFF-9C88-40734F7F2B1F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Medidata.Pikapika.DatabaseAccess", "src\Medidata.Pikapika.DatabaseAccess\Medidata.Pikapika.DatabaseAccess.csproj", "{69251C86-4654-4AFF-9C88-40734F7F2B1F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

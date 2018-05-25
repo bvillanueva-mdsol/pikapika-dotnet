@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
@@ -11,7 +12,7 @@ namespace Medidata.Pikapika.Miner.Extensions
 {
     public static class XmlExtenstions
     {
-        public static XDocument TryConvertToXDocument(this string xmlString, Logger logger, out bool isXmlStringValid)
+        public static XDocument TryConvertToXDocument(this string xmlString, Logger logger, out bool isXmlStringValid, bool lastTry = false)
         {
             isXmlStringValid = false;
 
@@ -24,9 +25,21 @@ namespace Medidata.Pikapika.Miner.Extensions
             }
             catch (Exception ex)
             {
-                logger.LogError($"TryConvertToXDocument Exception encountered: {ex.Message}");
-                isXmlStringValid = false;
-                return null;
+                logger.LogWarning($"First TryConvertToXDocument Exception encountered: {ex.Message}");
+                if (lastTry)
+                {
+                    logger.LogError($"Last TryConvertToXDocument Exception encountered: {ex.Message}");
+                    isXmlStringValid = false;
+                    return null;
+                }
+
+                logger.LogWarning($"Trying again TryConvertToXDocument without extra byte as prefix in XML doc.");
+                var _byteOrderMarkUtf8 = Encoding.UTF8.GetString(Encoding.UTF8.GetPreamble());
+                if (xmlString.StartsWith(_byteOrderMarkUtf8))
+                {
+                    xmlString = xmlString.Remove(0, _byteOrderMarkUtf8.Length);
+                }
+                return TryConvertToXDocument(xmlString, logger, out isXmlStringValid, true);
             }
         }
 
@@ -47,12 +60,31 @@ namespace Medidata.Pikapika.Miner.Extensions
 
         private static IEnumerable<string> GetFrameworksFromNewCsProj(this XDocument document)
         {
-            return document.Root.Elements("PropertyGroup")
+            var result = new List<string>();
+            var propertyGroups = document.Root.Elements("PropertyGroup");
+
+            var targetFramework = propertyGroups
                 .Where(element => element.Elements("TargetFramework").Any())
                 .FirstOrDefault()?
                 .Element("TargetFramework")
-                .Value
-                .Split(',');
+                .Value;
+            if (!string.IsNullOrWhiteSpace(targetFramework))
+            {
+                result.Add(targetFramework);
+            }
+            else
+            {
+                var targetFrameworks = propertyGroups
+                    .Where(element => element.Elements("TargetFrameworks").Any())
+                    .FirstOrDefault()?
+                    .Element("TargetFrameworks")
+                    .Value;
+                if (!string.IsNullOrWhiteSpace(targetFrameworks))
+                {
+                    result.AddRange(targetFrameworks.Split(';'));
+                }
+            }
+            return result;
         }
 
         public static string GetFrameworkFromOldCsProj(this XDocument document)

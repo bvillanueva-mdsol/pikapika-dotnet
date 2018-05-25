@@ -32,8 +32,8 @@ namespace Medidata.Pikapika.Miner.Extensions
         {
             return dotnetAppName
                 .Replace(".csproj", string.Empty)
-                .Replace("Medidata.Cloud.", string.Empty, StringComparison.OrdinalIgnoreCase)
-                .Replace("Medidata.", string.Empty, StringComparison.OrdinalIgnoreCase)
+                .Replace("Medidata.Cloud.", string.Empty)
+                .Replace("Medidata.", string.Empty)
                 .Replace('.', '-');
         }
 
