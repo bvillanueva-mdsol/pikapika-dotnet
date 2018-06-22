@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json;
 
 namespace Medidata.Pikapika.DatabaseAccess
 {
@@ -25,5 +27,11 @@ namespace Medidata.Pikapika.DatabaseAccess
         public DateTime UpdatedAt { get; set; }
 
         public ICollection<DotnetAppDotnetNugets> DotnetAppDotnetNugets { get; set; }
+
+        public IEnumerable<string> GetVersions()
+        {
+            var data = JsonConvert.DeserializeObject<IEnumerable<IDictionary<string, string>>>(Versions);
+            return data.Select(d => d["version"]).ToList();
+        }
     }
 }

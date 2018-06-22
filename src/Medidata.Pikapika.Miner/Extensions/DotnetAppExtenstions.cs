@@ -71,12 +71,44 @@ namespace Medidata.Pikapika.Miner.Extensions
                     {
                         DotnetAppId = dotnetAppsFromDbFiltered.First().Id,
                         DotnetNugetId = dotnetNugetsFromDBFiltered.First().Id,
-                        Version = projectNuget.Version
+                        Version = GetVersionFroMetadatasource(projectNuget.Version, dotnetNugetsFromDBFiltered.First().GetVersions())
                     });
                 }
             }
 
             return result;
+        }
+
+        private static string GetVersionFroMetadatasource(string appNugetVersion, IEnumerable<string> nugetMetadataVersions)
+        {
+            foreach (var nugetMetadataVersion in nugetMetadataVersions)
+            {
+                if (CompareVersionNumbers(appNugetVersion, nugetMetadataVersion))
+                    return nugetMetadataVersion;
+            }
+
+            return appNugetVersion;
+        }
+
+        private static bool CompareVersionNumbers(string versionA, string versionB)
+        {
+            // Convert each version parts string to a list of strings
+            List<string> a = versionA.ToLowerInvariant().Split('.').ToList();
+            List<string> b = versionB.ToLowerInvariant().Split('.').ToList();
+
+            // Ensure that each of the lists are the same length
+            while (a.Count < b.Count) { a.Add("0"); }
+            while (b.Count < a.Count) { b.Add("0"); }
+
+            // Compare elements of each list
+            for (int i = 0; i < a.Count; i++)
+            {
+                if (!a[i].Equals(b[i]))
+                    return false;
+            }
+
+            // If we reach this point, the versions are equal
+            return true;
         }
     }
 }

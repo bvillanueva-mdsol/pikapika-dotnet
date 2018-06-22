@@ -39,6 +39,7 @@ namespace Medidata.Pikapika.ConsoleRunner
                         configuration.GetSection("AuthorizationUsername").Value,
                         configuration.GetSection("AuthorizationToken").Value,
                         configuration.GetSection("GithubBaseUri").Value,
+                         configuration.GetSection("MedidataRepositories").GetChildren().Select(x => x.Value),
                         logger);
                     var nugetRepositoryAccess = new NugetRepositoryAccess(
                         new Uri(configuration.GetSection("PublicNugetServerUri").Value),
