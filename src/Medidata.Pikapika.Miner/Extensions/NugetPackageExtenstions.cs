@@ -22,7 +22,7 @@ namespace Medidata.Pikapika.Miner.Extensions
                     .Reverse() // pikapika ui expects latest as first
                     .Select(x => new
                     {
-                        version = x.PackageSearchMetadata.Identity.Version.ToFullString(),
+                        version = x.PackageSearchMetadata.Identity.Version.ToString(),
                         timestamp = DateTime.SpecifyKind(x.PackageSearchMetadata.Published.Value.DateTime, DateTimeKind.Utc).ToString("o")
                     })
                     .ToList());
