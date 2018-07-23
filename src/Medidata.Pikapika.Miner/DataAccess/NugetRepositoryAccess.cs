@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Medidata.Pikapika.Miner.Models;
+using NuGet.Configuration;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 
@@ -11,44 +12,35 @@ namespace Medidata.Pikapika.Miner.DataAccess
 {
     public class NugetRepositoryAccess
     {
-        internal readonly SourceRepository _publicNugetServerRepository;
-
-        internal readonly List<SourceRepository> _medidataNugetFeeds;
+        internal readonly List<(string sourceUri, PackageMetadataResource packageMetadataResource)> _sources;
         
         public NugetRepositoryAccess(Uri publicNugetServerUri,
             Uri medidataNugetServerBaseUri, string medidataNugetToken,
             IEnumerable<string> medidataNugetFeedNames)
         {
-            var publicNugetServerRepository = new List<Lazy<INuGetResourceProvider>>(Repository.Provider.GetCoreV3());
+            _sources = new List<(string, PackageMetadataResource)>();
 
-            _publicNugetServerRepository = new SourceRepository(
-                new NuGet.Configuration.PackageSource(publicNugetServerUri.AbsoluteUri),
-                publicNugetServerRepository);
-            _medidataNugetFeeds = new List<SourceRepository>();
+            var publicSourceRepository = new SourceRepository(new PackageSource(publicNugetServerUri.AbsoluteUri), Repository.Provider.GetCoreV3());
+            var publicPackageMetadataResource = publicSourceRepository.GetResourceAsync<PackageMetadataResource>().Result;
+            _sources.Add((publicSourceRepository.PackageSource.SourceUri.AbsoluteUri, publicPackageMetadataResource));
+
             foreach (var medidataNugetFeedName in medidataNugetFeedNames)
             {
-                var sourceUri = new Uri(medidataNugetServerBaseUri, $"F/{medidataNugetFeedName}/auth/{medidataNugetToken}/api/v3/index.json");
-                _medidataNugetFeeds.Add(new SourceRepository(
-                    new NuGet.Configuration.PackageSource(sourceUri.AbsoluteUri),
-                    publicNugetServerRepository));
+                var medidataSourceUri = new Uri(medidataNugetServerBaseUri, $"F/{medidataNugetFeedName}/auth/{medidataNugetToken}/api/v3/index.json");
+                var medidataSourceRepository = new SourceRepository(new PackageSource(medidataSourceUri.AbsoluteUri), Repository.Provider.GetCoreV3());
+                var medidataPackageMetadataResource = medidataSourceRepository.GetResourceAsync<PackageMetadataResource>().Result;
+                _sources.Add((medidataSourceRepository.PackageSource.SourceUri.AbsoluteUri, medidataPackageMetadataResource));
             }
         }
 
         public async Task<(IEnumerable<NugetPackage> packages, string foundFeedUri)> GetNugetFullInformation(string nugetId)
         {
-            var publicNugetPackageMetadataResource = await _publicNugetServerRepository.GetResourceAsync<PackageMetadataResource>();
-            var publicNugetSearchResult =  await publicNugetPackageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
-
-            if (publicNugetSearchResult.Count() != 0)
-                return (publicNugetSearchResult.Select(x => new OssNugetPackage(x)), _publicNugetServerRepository.PackageSource.SourceUri.AbsoluteUri);
-
-            foreach (var medidataNugetFeed in _medidataNugetFeeds)
+            foreach (var nugetFeed in _sources)
             {
-                var medidataNugetPackageMetadataResource = await medidataNugetFeed.GetResourceAsync<PackageMetadataResource>();
-                var medidataNugetSearchResult = await medidataNugetPackageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
+                var nugetSearchResult = await nugetFeed.packageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
 
-                if (medidataNugetSearchResult.Count() != 0)
-                    return (medidataNugetSearchResult.Select(x => new PrivateNugetPackage(x)), medidataNugetFeed.PackageSource.SourceUri.AbsoluteUri);
+                if (nugetSearchResult.Count() != 0)
+                    return (nugetSearchResult.Select(x => new PrivateNugetPackage(x)), nugetFeed.sourceUri);
             }
 
             return (Enumerable.Empty<NugetPackage>(), string.Empty);

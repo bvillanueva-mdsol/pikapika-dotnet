@@ -7,6 +7,7 @@ using System.Xml.Linq;
 using System.Xml.XPath;
 using Medidata.Pikapika.Miner.Models;
 using NuGet;
+using NuGet.Packaging;
 
 namespace Medidata.Pikapika.Miner.Extensions
 {

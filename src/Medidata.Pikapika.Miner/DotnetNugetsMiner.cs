@@ -21,20 +21,18 @@ namespace Medidata.Pikapika.Miner
         public async Task<IDictionary<string, IEnumerable<NugetPackage>>> Mine(IEnumerable<string> nugetIds)
         {
             var result = new Dictionary<string, IEnumerable<NugetPackage>>();
+
             var nugetFeedUsage = new Dictionary<string, int>();
-            nugetFeedUsage.Add(_nugetRepositoryAccess._publicNugetServerRepository.PackageSource.SourceUri.AbsoluteUri, 0);
-            foreach (var medidataNugetFeed in _nugetRepositoryAccess._medidataNugetFeeds)
-            {
-                nugetFeedUsage.Add(medidataNugetFeed.PackageSource.SourceUri.AbsoluteUri, 0);
-            }
+            foreach (var (sourceUri, packageMetadataResource) in _nugetRepositoryAccess._sources)
+                nugetFeedUsage.Add(sourceUri, 0);
 
             foreach (var nugetId in nugetIds)
             {
-                var nugetInfo = await _nugetRepositoryAccess.GetNugetFullInformation(nugetId);
-                if (nugetInfo.packages.Any())
+                var (packages, foundFeedUri) = await _nugetRepositoryAccess.GetNugetFullInformation(nugetId);
+                if (packages.Any())
                 {
-                    result.Add(nugetId, nugetInfo.packages);
-                    nugetFeedUsage[nugetInfo.foundFeedUri]++;
+                    result.Add(nugetId, packages);
+                    nugetFeedUsage[foundFeedUri]++;
                     continue;
                 }
                 _logger.LogError($"{nugetId} information cannot be found in our nuget feeds.");
