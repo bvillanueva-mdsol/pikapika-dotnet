@@ -170,9 +170,6 @@ namespace Medidata.Pikapika.Miner
             return result;
         }
 
-        private bool AreEquivalent(string expectedRepository, string actualRepository) =>
-            expectedRepository.Equals(actualRepository, StringComparison.OrdinalIgnoreCase);
-
         private async Task<IEnumerable<ResultItem>> GetAllProjects(string projectQuery, string extension, string repo)
         {
             return (await _githubAccess.SearchDotnetFiles(projectQuery, extension, repo))
