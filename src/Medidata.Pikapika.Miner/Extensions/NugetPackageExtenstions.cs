@@ -23,7 +23,13 @@ namespace Medidata.Pikapika.Miner.Extensions
                     .Select(x => new
                     {
                         version = x.PackageSearchMetadata.Identity.Version.ToString(),
-                        timestamp = DateTime.SpecifyKind(x.PackageSearchMetadata.Published.Value.DateTime, DateTimeKind.Utc).ToString("o")
+                        timestamp = DateTime.SpecifyKind(x.PackageSearchMetadata.Published.Value.DateTime, DateTimeKind.Utc).ToString("o"),
+                        frameworkDependencies = x.PackageSearchMetadata.DependencySets
+                            .Select(y => new
+                            {
+                                framework = y.TargetFramework.Framework,
+                                version = y.TargetFramework.Version.ToString()
+                            })
                     })
                     .ToList());
             var oss = latest is OssNugetPackage;
