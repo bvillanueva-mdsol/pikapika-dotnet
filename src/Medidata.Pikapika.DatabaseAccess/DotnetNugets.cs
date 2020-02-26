@@ -30,8 +30,31 @@ namespace Medidata.Pikapika.DatabaseAccess
 
         public IEnumerable<string> GetVersions()
         {
-            var data = JsonConvert.DeserializeObject<IEnumerable<IDictionary<string, string>>>(Versions);
-            return data.Select(d => d["version"]).ToList();
+            try
+            {
+                var data = JsonConvert.DeserializeObject<IEnumerable<NugetVersion>>(Versions);
+                return data.Select(d => d.Version).ToList();
+            }
+            catch(Exception ex)
+            {
+                throw;
+            }
         }
+    }
+
+    public class NugetVersion
+    {
+        public string Version { get; set; }
+
+        public string Timestamp { get; set; }
+
+        public IEnumerable<FrameworkDependency> FrameworkDependencies { get; set; }
+    }
+
+    public class FrameworkDependency
+    {
+        public string Version { get; set; }
+
+        public string Framework { get; set; }
     }
 }

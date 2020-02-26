@@ -123,12 +123,14 @@ namespace Medidata.Pikapika.Miner.Extensions
             var itemGroups = document.Root.Elements("ItemGroup");
             foreach (var itemGroup in itemGroups)
             {
-                references.AddRange(itemGroup.Elements("PackageReference")
-                .Select(x => new DotnetAppProjectNuget()
-                {
-                    Name = x.GetOptionalAttributeValue("Include"),
-                    Version = x.GetOptionalAttributeValue("Version")
-                }));
+                references.AddRange(
+                    itemGroup.Elements("PackageReference")
+                        .Where(x => !string.IsNullOrEmpty(x.GetOptionalAttributeValue("Include")))
+                        .Select(x => new DotnetAppProjectNuget()
+                        {
+                            Name = x.GetOptionalAttributeValue("Include"),
+                            Version = x.GetOptionalAttributeValue("Version")
+                        }));
             }
 
             return references;
