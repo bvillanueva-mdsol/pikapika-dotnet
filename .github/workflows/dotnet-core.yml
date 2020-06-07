@@ -2,9 +2,9 @@ name: .NET Core projects
 
 on:
   push:
-    branches: [ master, develop ]
+    branches: [ master, 'version**' ]
   pull_request:
-    branches: [ master, develop ]
+    branches: [ master, 'version**' ]
 
 jobs:
   build:
