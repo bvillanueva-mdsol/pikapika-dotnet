@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Medidata.Pikapika.DatabaseAccess;
+using DatabaseAccess;
 using Medidata.Pikapika.Miner.DataAccess;
 using Medidata.Pikapika.Miner.DataAccess.Models.SearchCodeApi;
 using Medidata.Pikapika.Miner.Extensions;

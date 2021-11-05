@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Medidata.Pikapika.DatabaseAccess;
+using DatabaseAccess;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medidata.Pikapika.Miner.DataAccess
@@ -144,7 +144,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
             {
                 return await context.DotnetApps
                     .Where(x =>
-                        apps.Any(y => 
+                        apps.Any(y =>
                             y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
                             y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)))
                     .ToListAsync();
@@ -226,7 +226,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
                     context.DotnetNugets.Add(dotnetNuget);
                 }
                 context.SaveChanges();
-            } 
+            }
         }
 
         private void SaveDotnetAppDotnetNugetRelationship(DotnetAppDotnetNugets dotnetAppDotnetNuget, IEnumerable<DotnetAppDotnetNugets> storedDotnetAppDotnetNugets)

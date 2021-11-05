@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Medidata.Pikapika.DatabaseAccess;
+using DatabaseAccess;
 using Medidata.Pikapika.Miner.Models;
 using Newtonsoft.Json;
 
