@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using DatabaseAccess;
+using Medidata.Pikapika.DatabaseAccess;
 using Medidata.Pikapika.Miner.Models;
 
 namespace Medidata.Pikapika.Miner.Extensions
@@ -81,7 +81,7 @@ namespace Medidata.Pikapika.Miner.Extensions
 
         private static string GetVersionFroMetadatasource(string appNugetVersion, IEnumerable<string> nugetMetadataVersions)
         {
-            // no version specified 
+            // no version specified
             if (string.IsNullOrEmpty(appNugetVersion))
                 return appNugetVersion;
 

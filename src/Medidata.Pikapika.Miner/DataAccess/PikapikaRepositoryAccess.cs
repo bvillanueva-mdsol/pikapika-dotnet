@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DatabaseAccess;
+using Medidata.Pikapika.DatabaseAccess;
 using Microsoft.EntityFrameworkCore;
 
 namespace Medidata.Pikapika.Miner.DataAccess

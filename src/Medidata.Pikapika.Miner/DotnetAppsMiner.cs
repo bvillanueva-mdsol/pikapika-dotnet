@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using DatabaseAccess;
+using Medidata.Pikapika.DatabaseAccess;
 using Medidata.Pikapika.Miner.DataAccess;
 using Medidata.Pikapika.Miner.DataAccess.Models.SearchCodeApi;
 using Medidata.Pikapika.Miner.Extensions;
@@ -69,7 +69,7 @@ namespace Medidata.Pikapika.Miner
                             _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
                             projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
 
-                            if (//!projectFile.DotnetAppProject.Frameworks.Any() && 
+                            if (//!projectFile.DotnetAppProject.Frameworks.Any() &&
                                 !projectFile.DotnetAppProject.ProjectNugets.Any())
                             {
                                 _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} has no frameworks/nugets! skipping..");

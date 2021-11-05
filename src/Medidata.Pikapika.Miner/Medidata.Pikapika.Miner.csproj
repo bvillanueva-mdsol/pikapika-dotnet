@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DatabaseAccess\DatabaseAccess.csproj" />
+    <ProjectReference Include="..\Medidata.Pikapika.DatabaseAccess\Medidata.Pikapika.DatabaseAccess.csproj" />
   </ItemGroup>
 
 </Project>
