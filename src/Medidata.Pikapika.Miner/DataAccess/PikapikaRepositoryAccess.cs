@@ -120,8 +120,8 @@ namespace Medidata.Pikapika.Miner.DataAccess
                 var idCombination = $"{repo}{path}";
                 return (await context.DotnetApps
                     .Where(x =>
-                        name.Equals(x.Name, StringComparison.OrdinalIgnoreCase) &&
-                        !idCombination.Equals($"{x.Repo}{x.Path}", StringComparison.OrdinalIgnoreCase))
+                        name == x.Name &&
+                        idCombination != x.Repo + x.Path)
                     .FirstOrDefaultAsync()) != null;
             }
         }
@@ -132,8 +132,8 @@ namespace Medidata.Pikapika.Miner.DataAccess
             {
                 return await context.DotnetApps
                     .Where(x =>
-                        repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
-                        path.Equals(x.Path, StringComparison.OrdinalIgnoreCase))
+                        repo == x.Repo &&
+                        path == x.Path)
                     .FirstOrDefaultAsync();
             }
         }
@@ -142,12 +142,13 @@ namespace Medidata.Pikapika.Miner.DataAccess
         {
             using (var context = new PikapikaContext(_options))
             {
-                return await context.DotnetApps
+                var allApps = await context.DotnetApps
+                    .ToListAsync();
+                return allApps
                     .Where(x =>
                         apps.Any(y =>
-                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
-                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)))
-                    .ToListAsync();
+                            y.Repo == x.Repo &&
+                            y.Path == x.Path));
             }
         }
 
@@ -165,10 +166,10 @@ namespace Medidata.Pikapika.Miner.DataAccess
             var tobeDeletedApps = dotnetAppsFromDb
                     .Where(x =>
                         newDotnetApps.Any(y =>
-                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase)) &&
+                            y.Repo == x.Repo) &&
                         !newDotnetApps.Any(y =>
-                            y.Repo.Equals(x.Repo, StringComparison.OrdinalIgnoreCase) &&
-                            y.Path.Equals(x.Path, StringComparison.OrdinalIgnoreCase)));
+                            y.Repo == x.Repo &&
+                            y.Path == x.Path));
             foreach (var tobeDeletedApp in tobeDeletedApps)
             {
                 _logger.LogWarning($"Deleting in App Name:{tobeDeletedApp.Name}, path: {tobeDeletedApp.Repo}/{tobeDeletedApp.Path}");
@@ -203,7 +204,7 @@ namespace Medidata.Pikapika.Miner.DataAccess
         {
             var storedDotnetNuget = storedDotnetNugets
                 .Where(x =>
-                        x.Slug.Equals(dotnetNuget.Slug, StringComparison.OrdinalIgnoreCase))
+                        x.Slug == dotnetNuget.Slug)
                 .FirstOrDefault();
 
             using (var context = new PikapikaContext(_options))
