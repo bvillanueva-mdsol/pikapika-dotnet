@@ -20,6 +20,8 @@ namespace Medidata.Pikapika.Worker.Configuration
 
         public string MedidataNugetAccessPassword { get; set; }
 
+        public string WorkerCronSchedule { get; set; }
+
         public IEnumerable<string> MedidataRepositories { get; set; }
     }
 }

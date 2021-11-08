@@ -21,7 +21,6 @@ namespace Medidata.Pikapika.Worker
 
         private readonly CrontabSchedule _crontabSchedule;
         private DateTime _nextRun;
-        private const string Schedule = "0 0 1,15,18 * * *"; // run day at 1 am
 
 
         public Worker(
@@ -31,7 +30,8 @@ namespace Medidata.Pikapika.Worker
             _workerConfiguration = workerConfigurationAccessor.Value;
             _logger = logger;
 
-            _crontabSchedule = CrontabSchedule.Parse(Schedule, new CrontabSchedule.ParseOptions { IncludingSeconds = true });
+            _crontabSchedule = CrontabSchedule.Parse(_workerConfiguration.WorkerCronSchedule,
+                new CrontabSchedule.ParseOptions { IncludingSeconds = true });
             _nextRun = _crontabSchedule.GetNextOccurrence(DateTime.Now);
         }
 
@@ -39,7 +39,6 @@ namespace Medidata.Pikapika.Worker
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                var until = UntilNextExecution();
                 await Task.Delay(UntilNextExecution(), stoppingToken); // wait until next time
 
                 await Execute(); //execute some task
