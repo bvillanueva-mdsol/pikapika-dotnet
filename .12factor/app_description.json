@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
       "ConnectionStrings:PikapikaDatabase": {
-        "type": "boolean"
+        "type": "string"
       },
       "AuthorizationUsername": {
         "type": "string"
