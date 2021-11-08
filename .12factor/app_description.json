@@ -14,9 +14,6 @@
       "GithubBaseUri": {
         "type": "number"
       },
-      "MedidataRepositories": {
-        "type": "string"
-      },
       "PublicNugetServerUri": {
         "type": "string"
       },
@@ -38,7 +35,6 @@
       "AuthorizationUsername",
       "AuthorizationToken",
       "GithubBaseUri",
-      "MedidataRepositories",
       "PublicNugetServerUri",
       "MedidataNugetServerBaseUri",
       "MedidataNugetAccessUserName",
