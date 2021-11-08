@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Medidata.Pikapika.ConsoleRu
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Medidata.Pikapika.DatabaseAccess", "src\Medidata.Pikapika.DatabaseAccess\Medidata.Pikapika.DatabaseAccess.csproj", "{69251C86-4654-4AFF-9C88-40734F7F2B1F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Medidata.Pikapika.Worker", "src\Medidata.Pikapika.Worker\Medidata.Pikapika.Worker.csproj", "{15BA1B1E-4181-45F1-8B8D-8DF118005DD4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{69251C86-4654-4AFF-9C88-40734F7F2B1F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{69251C86-4654-4AFF-9C88-40734F7F2B1F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{69251C86-4654-4AFF-9C88-40734F7F2B1F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15BA1B1E-4181-45F1-8B8D-8DF118005DD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15BA1B1E-4181-45F1-8B8D-8DF118005DD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15BA1B1E-4181-45F1-8B8D-8DF118005DD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15BA1B1E-4181-45F1-8B8D-8DF118005DD4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
