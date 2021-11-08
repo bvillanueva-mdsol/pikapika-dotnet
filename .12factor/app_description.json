@@ -50,7 +50,6 @@
       "pikapika-dotnet-worker": "dotnet worker/Medidata.Pikapika.Worker.dll"
     },
     "listening_ports": {
-      "web": [ 8080 ]
     },
     "admin_tasks": {
     },
