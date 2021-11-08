@@ -12,7 +12,7 @@
         "type": "string"
       },
       "GithubBaseUri": {
-        "type": "number"
+        "type": "string"
       },
       "PublicNugetServerUri": {
         "type": "string"
@@ -21,7 +21,7 @@
         "type": "string"
       },
       "MedidataNugetAccessUserName": {
-        "type": "number"
+        "type": "string"
       },
       "MedidataNugetAccessPassword": {
         "type": "string"
