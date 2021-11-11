@@ -23,13 +23,13 @@ namespace Medidata.Pikapika.DatabaseAccess
                 entity.ToTable("dotnet_app_dotnet_nugets");
 
                 entity.HasIndex(e => e.DotnetAppId)
-                    .HasName("index_dotnet_app_dotnet_nugets_on_dotnet_app_id");
+                    .HasDatabaseName("index_dotnet_app_dotnet_nugets_on_dotnet_app_id");
 
                 entity.HasIndex(e => e.DotnetNugetId)
-                    .HasName("index_dotnet_app_dotnet_nugets_on_dotnet_nuget_id");
+                    .HasDatabaseName("index_dotnet_app_dotnet_nugets_on_dotnet_nuget_id");
 
                 entity.HasIndex(e => new { e.DotnetAppId, e.DotnetNugetId })
-                    .HasName("dotnet_app_nuget")
+                    .HasDatabaseName("dotnet_app_nuget")
                     .IsUnique();
 
                 entity.Property(e => e.Id).HasColumnName("id");
@@ -62,14 +62,14 @@ namespace Medidata.Pikapika.DatabaseAccess
                 entity.ToTable("dotnet_apps");
 
                 entity.HasIndex(e => e.Deployed)
-                    .HasName("index_dotnet_apps_on_deployed");
+                    .HasDatabaseName("index_dotnet_apps_on_deployed");
 
                 entity.HasIndex(e => e.Name)
-                    .HasName("index_dotnet_apps_on_name")
+                    .HasDatabaseName("index_dotnet_apps_on_name")
                     .IsUnique();
 
                 entity.HasIndex(e => new { e.Repo, e.Path })
-                    .HasName("index_dotnet_apps_on_repo_and_path")
+                    .HasDatabaseName("index_dotnet_apps_on_repo_and_path")
                     .IsUnique();
 
                 entity.Property(e => e.Id).HasColumnName("id");
@@ -124,10 +124,10 @@ namespace Medidata.Pikapika.DatabaseAccess
                 entity.ToTable("dotnet_nugets");
 
                 entity.HasIndex(e => e.Name)
-                    .HasName("index_dotnet_nugets_on_name");
+                    .HasDatabaseName("index_dotnet_nugets_on_name");
 
                 entity.HasIndex(e => e.Slug)
-                    .HasName("index_dotnet_nugets_on_slug")
+                    .HasDatabaseName("index_dotnet_nugets_on_slug")
                     .IsUnique();
 
                 entity.Property(e => e.Id).HasColumnName("id");

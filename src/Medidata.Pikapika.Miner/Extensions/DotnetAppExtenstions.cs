@@ -81,7 +81,7 @@ namespace Medidata.Pikapika.Miner.Extensions
 
         private static string GetVersionFroMetadatasource(string appNugetVersion, IEnumerable<string> nugetMetadataVersions)
         {
-            // no version specified 
+            // no version specified
             if (string.IsNullOrEmpty(appNugetVersion))
                 return appNugetVersion;
 

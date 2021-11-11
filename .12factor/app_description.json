@@ -1,0 +1,63 @@
+{
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "ConnectionStrings:PikapikaDatabase": {
+        "type": "string"
+      },
+      "AuthorizationUsername": {
+        "type": "string"
+      },
+      "AuthorizationToken": {
+        "type": "string"
+      },
+      "GithubBaseUri": {
+        "type": "string"
+      },
+      "PublicNugetServerUri": {
+        "type": "string"
+      },
+      "MedidataNugetServerBaseUri": {
+        "type": "string"
+      },
+      "MedidataNugetAccessUserName": {
+        "type": "string"
+      },
+      "MedidataNugetAccessPassword": {
+        "type": "string"
+      },
+      "WorkerCronSchedule": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "ConnectionStrings:PikapikaDatabase",
+      "AuthorizationUsername",
+      "AuthorizationToken",
+      "GithubBaseUri",
+      "PublicNugetServerUri",
+      "MedidataNugetServerBaseUri",
+      "MedidataNugetAccessUserName",
+      "MedidataNugetAccessPassword",
+      "WorkerCronSchedule"
+    ]
+  },
+  "deploy_env": {
+    "cmd_release": [
+      "echo OK"
+    ],
+    "processes": {
+      "pikapika-dotnet-worker": "dotnet worker/Medidata.Pikapika.Worker.dll"
+    },
+    "listening_ports": {
+    },
+    "admin_tasks": {
+    },
+    "deploy_tasks": [
+      "pikapika-dotnet-worker"
+    ],
+    "max_ram": {
+      "pikapika-dotnet-worker": 512
+    }
+  }
+}

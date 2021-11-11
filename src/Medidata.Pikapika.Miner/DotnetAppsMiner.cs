@@ -69,7 +69,7 @@ namespace Medidata.Pikapika.Miner
                             _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} is new!");
                             projectFile.DotnetAppProject = projectXmlDocument.ConvertToDotnetAppProject();
 
-                            if (//!projectFile.DotnetAppProject.Frameworks.Any() && 
+                            if (//!projectFile.DotnetAppProject.Frameworks.Any() &&
                                 !projectFile.DotnetAppProject.ProjectNugets.Any())
                             {
                                 _logger.LogInformation($"{dotnetApp.Repository}/{projectFile.ProjectFilePath} has no frameworks/nugets! skipping..");
@@ -137,7 +137,7 @@ namespace Medidata.Pikapika.Miner
         private async Task<IEnumerable<DotnetApp>> GetNewOrUpdatedDotnetApps(Dictionary<string, DateTime> repoDatetimeDictionary)
         {
             var allDotnetApps = (await _githubOfficialClient.Repository.GetAllForOrg("mdsol"))
-                //.Where(x => x.Language == "C#")
+                .Where(x => x.Language == "C#")
                 .OrderByDescending(x => x.PushedAt)
                 .Select(cSharpRepo => new DotnetApp
                 {
@@ -151,7 +151,7 @@ namespace Medidata.Pikapika.Miner
                 });
 
             var result = allDotnetApps
-                .Where(app => _medidataRepositories.Any(medRep => medRep.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)))
+                //.Where(app => _medidataRepositories.Any(medRep => medRep.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)))
                 .Where(app =>
                     !repoDatetimeDictionary.Any(x =>
                         x.Key.Equals(app.Repository, StringComparison.OrdinalIgnoreCase)) ||

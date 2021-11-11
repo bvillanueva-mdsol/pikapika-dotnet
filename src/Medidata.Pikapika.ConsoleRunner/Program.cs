@@ -44,8 +44,9 @@ namespace Medidata.Pikapika.ConsoleRunner
                     var nugetRepositoryAccess = new NugetRepositoryAccess(
                         new Uri(configuration.GetSection("PublicNugetServerUri").Value),
                         new Uri(configuration.GetSection("MedidataNugetServerBaseUri").Value),
-                        configuration.GetSection("MedidataNugetToken").Value,
-                        configuration.GetSection("MedidataNugetFeeds").GetChildren().Select(x => x.Value));
+                        configuration.GetSection("MedidataNugetAccessUserName").Value,
+                        configuration.GetSection("MedidataNugetAccessPassword").Value,
+                        logger);
                     var dotnetNugetsMiner = new DotnetNugetsMiner(nugetRepositoryAccess, logger);
 
                     var timer = new Stopwatch();

@@ -13,34 +13,46 @@ namespace Medidata.Pikapika.Miner.DataAccess
     public class NugetRepositoryAccess
     {
         internal readonly List<(string sourceUri, PackageMetadataResource packageMetadataResource)> _sources;
-        
+
+        private readonly SourceCacheContext _cache = new();
+        private readonly Logger _logger;
+
         public NugetRepositoryAccess(Uri publicNugetServerUri,
-            Uri medidataNugetServerBaseUri, string medidataNugetToken,
-            IEnumerable<string> medidataNugetFeedNames)
+            Uri medidataNugetServerBaseUri, string medidataNugetAccessUserName,
+            string medidataNugetAccessPassword, Logger logger)
         {
             _sources = new List<(string, PackageMetadataResource)>();
 
-            var publicSourceRepository = new SourceRepository(new PackageSource(publicNugetServerUri.AbsoluteUri), Repository.Provider.GetCoreV3());
+            var publicSourceRepository = Repository.Factory.GetCoreV3(publicNugetServerUri.AbsoluteUri);
             var publicPackageMetadataResource = publicSourceRepository.GetResourceAsync<PackageMetadataResource>().Result;
             _sources.Add((publicSourceRepository.PackageSource.SourceUri.AbsoluteUri, publicPackageMetadataResource));
 
-            foreach (var medidataNugetFeedName in medidataNugetFeedNames)
+            var privateSourceUri = medidataNugetServerBaseUri.AbsoluteUri;
+            var privatePackageSource = new PackageSource(privateSourceUri)
             {
-                var medidataSourceUri = new Uri(medidataNugetServerBaseUri, $"F/{medidataNugetFeedName}/auth/{medidataNugetToken}/api/v3/index.json");
-                var medidataSourceRepository = new SourceRepository(new PackageSource(medidataSourceUri.AbsoluteUri), Repository.Provider.GetCoreV3());
-                var medidataPackageMetadataResource = medidataSourceRepository.GetResourceAsync<PackageMetadataResource>().Result;
-                _sources.Add((medidataSourceRepository.PackageSource.SourceUri.AbsoluteUri, medidataPackageMetadataResource));
-            }
+                Credentials = new PackageSourceCredential(
+                    source: privateSourceUri,
+                    username: medidataNugetAccessUserName,
+                    passwordText: medidataNugetAccessPassword,
+                    isPasswordClearText: true,
+                    validAuthenticationTypesText: null)
+            };
+            var privateRepository = Repository.Factory.GetCoreV3(privatePackageSource);
+            var privatePackageMetadataResource = privateRepository.GetResourceAsync<PackageMetadataResource>().Result;
+            _sources.Add((privateRepository.PackageSource.SourceUri.AbsoluteUri, privatePackageMetadataResource));
+
+
+            _logger = logger;
         }
 
         public async Task<(IEnumerable<NugetPackage> packages, string foundFeedUri)> GetNugetFullInformation(string nugetId)
         {
-            foreach (var nugetFeed in _sources)
+            foreach (var (sourceUri, packageMetadataResource) in _sources)
             {
-                var nugetSearchResult = await nugetFeed.packageMetadataResource.GetMetadataAsync(nugetId, true, false, new Logger(), CancellationToken.None);
+                var nugetSearchResult = await packageMetadataResource.GetMetadataAsync(nugetId, true, false, _cache, _logger, CancellationToken.None);
 
-                if (nugetSearchResult.Count() != 0)
-                    return (nugetSearchResult.Select(x => new PrivateNugetPackage(x)), nugetFeed.sourceUri);
+                if (nugetSearchResult.Any())
+                    return (nugetSearchResult.Select(x => new PrivateNugetPackage(x)), sourceUri);
             }
 
             return (Enumerable.Empty<NugetPackage>(), string.Empty);
